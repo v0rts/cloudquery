@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	cqsort "github.com/cloudquery/cloudquery/internal/sort"
 )
 
 type RunParams struct {
@@ -24,6 +26,39 @@ type Resource struct {
 }
 
 type ResourceList []*Resource
+
+type Result struct {
+	Provider     string `json:"provider"`
+	ResourceType string `json:"resource_type"`
+
+	// Deep mode
+	Different ResourceList `json:"diff,omitempty"`       // Resources don't match fully (id + attributes don't match)
+	DeepEqual ResourceList `json:"deep_equal,omitempty"` // Resource exists in both places (attributes match)
+
+	// Shallow mode
+	Equal ResourceList `json:"equal,omitempty"` // Resource exists in both places (attributes not checked)
+
+	// Both modes
+	Missing ResourceList `json:"missing"` // Missing in cloud provider, defined in iac
+	Extra   ResourceList `json:"extra"`   // Exists in cloud provider, not defined in iac
+}
+
+type Results struct {
+	IACName string    `json:"iac"`
+	Data    []*Result `json:"data"`
+
+	// Options
+	ListManaged bool `json:"-"` // Show or hide Equal/DeepEqual output
+	Debug       bool `json:"-"` // Print debug output regarding results
+
+	// These fields are calculated
+	Drifted  int     `json:"drifted_res"`
+	Covered  int     `json:"covered_res"`
+	Total    int     `json:"total_res"`
+	Coverage float64 `json:"coverage_pct"`
+
+	Text string `json:"-"`
+}
 
 func (r ResourceList) IDs(exclude ...*Resource) []string {
 	exMap := make(map[string]struct{}, len(exclude))
@@ -58,22 +93,6 @@ func (r ResourceList) Map() map[string][]interface{} {
 	return ret
 }
 
-type Result struct {
-	Provider     string `json:"provider"`
-	ResourceType string `json:"resource_type"`
-
-	// Deep mode
-	Different ResourceList `json:"diff,omitempty"`       // Resources don't match fully (id + attributes don't match)
-	DeepEqual ResourceList `json:"deep_equal,omitempty"` // Resource exists in both places (attributes match)
-
-	// Shallow mode
-	Equal ResourceList `json:"equal,omitempty"` // Resource exists in both places (attributes not checked)
-
-	// Both modes
-	Missing ResourceList `json:"missing"` // Missing in cloud provider, defined in iac
-	Extra   ResourceList `json:"extra"`   // Exists in cloud provider, not defined in iac
-}
-
 func (r *Result) String() string {
 	stringDump := func(input []*Resource, name string, dst *[]string) {
 		switch l := len(input); l {
@@ -101,23 +120,6 @@ func (r *Result) String() string {
 	return fmt.Sprintf("%s:%s has %s resources", r.Provider, r.ResourceType, strings.Join(parts, ", "))
 }
 
-type Results struct {
-	IACName string    `json:"iac"`
-	Data    []*Result `json:"data"`
-
-	// Options
-	ListManaged bool `json:"-"` // Show or hide Equal/DeepEqual output
-	Debug       bool `json:"-"` // Print debug output regarding results
-
-	// These fields are calculated
-	Drifted  int     `json:"drifted_res"`
-	Covered  int     `json:"covered_res"`
-	Total    int     `json:"total_res"`
-	Coverage float64 `json:"coverage_pct"`
-
-	Text string `json:"-"`
-}
-
 func (rs *Results) String() string {
 	return rs.Text
 }
@@ -142,14 +144,24 @@ func (rs *Results) process() {
 		DeepEqual []combined
 		Missing   []combined
 	}
-	transform := func(r *Result, l ResourceList, dst *[]combined) {
-		ids := l.IDs()
+
+	// transform appends the given resource id list of type provName and resType into the given slice of combined type, an item per provider and resource type.
+	transform := func(ids []string, provName, resType string, dst *[]combined) {
 		if len(ids) == 0 {
 			return
 		}
+
+		// check if we already have the given resType in []combined somewhere, if so, append to that
+		for i, c := range *dst {
+			if c.Provider == provName && c.ResourceType == resType {
+				(*dst)[i].ResourceIDs = append((*dst)[i].ResourceIDs, ids...)
+				return
+			}
+		}
+
 		*dst = append(*dst, combined{
-			ResourceType: r.ResourceType,
-			Provider:     r.Provider,
+			ResourceType: resType,
+			Provider:     provName,
 			ResourceIDs:  ids,
 		})
 	}
@@ -158,11 +170,12 @@ func (rs *Results) process() {
 		if r == nil {
 			continue
 		}
-		transform(r, r.Different, &combo.Different)
-		transform(r, r.Extra, &combo.Extra)
-		transform(r, r.Equal, &combo.Equal)
-		transform(r, r.DeepEqual, &combo.DeepEqual)
-		transform(r, r.Missing, &combo.Missing)
+		cleanRes, _ := SplitHashedResource(r.ResourceType)
+		transform(r.Different.IDs(), r.Provider, cleanRes, &combo.Different)
+		transform(r.Extra.IDs(), r.Provider, cleanRes, &combo.Extra)
+		transform(r.Equal.IDs(), r.Provider, cleanRes, &combo.Equal)
+		transform(r.DeepEqual.IDs(), r.Provider, cleanRes, &combo.DeepEqual)
+		transform(r.Missing.IDs(), r.Provider, cleanRes, &combo.Missing)
 	}
 
 	var ( // nolint: prealloc
@@ -216,15 +229,14 @@ func (rs *Results) process() {
 		resLines := make([]string, 0, l)
 		resTotal := 0
 		for _, res := range data.list {
-			resTotal += len(res.ResourceIDs)
+			ids := cqsort.Unique(res.ResourceIDs)
+			resTotal += len(ids)
 			if data.hideListing {
 				continue
 			}
 
-			sort.Strings(res.ResourceIDs)
-
 			resLines = append(resLines, fmt.Sprintf("  %s:%s:", res.Provider, res.ResourceType))
-			for _, id := range res.ResourceIDs {
+			for _, id := range ids {
 				resLines = append(resLines, fmt.Sprintf("    - %s", id))
 			}
 		}
@@ -250,7 +262,7 @@ func (rs *Results) process() {
 	// one of Equal and DeepEqual is supposed to be 0 depending on deep flag
 	for _, l := range [][]combined{combo.Equal, combo.DeepEqual, combo.Different} {
 		for _, z := range l {
-			rs.Covered += len(z.ResourceIDs)
+			rs.Covered += len(cqsort.Unique(z.ResourceIDs))
 		}
 	}
 

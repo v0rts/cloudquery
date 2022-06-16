@@ -13,6 +13,9 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// GlobalConfig is the global alterable logging config
+var GlobalConfig Config
+
 // Config for logging
 type Config struct {
 	// Enable console logging
@@ -36,6 +39,8 @@ type Config struct {
 	MaxAge int `hcl:"max_age,optional"`
 	// Console logging will be without color, console logging must be enabled first.
 	ConsoleNoColor bool `hcl:"console_no_color,optional"`
+	// Unique Identifier of execution
+	InstanceId string
 
 	// console is a writer that will be used for console output. If it is not set os.Stderr will be used.
 	console io.Writer
@@ -52,7 +57,7 @@ type Config struct {
 func Configure(config Config) zerolog.Logger {
 	var writers []io.Writer
 
-	if config.ConsoleLoggingEnabled || !ui.IsTerminal() {
+	if config.ConsoleLoggingEnabled {
 		if config.EncodeLogsAsJson {
 			writers = append(writers, os.Stdout)
 		} else {
@@ -60,7 +65,7 @@ func Configure(config Config) zerolog.Logger {
 			if console == nil {
 				console = os.Stderr
 			}
-			writers = append(writers, zerolog.ConsoleWriter{FormatLevel: formatLevel, Out: console})
+			writers = append(writers, zerolog.ConsoleWriter{FormatLevel: formatLevel(config.ConsoleNoColor), Out: console, NoColor: config.ConsoleNoColor})
 		}
 	}
 
@@ -75,7 +80,14 @@ func Configure(config Config) zerolog.Logger {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	logger := zerolog.New(mw).With().Timestamp().Logger()
+	logger := zerolog.New(mw).With().Timestamp().Str("instance_id", config.InstanceId).Logger()
+	// override global logger
+	log.Logger = logger
+	// Default level is info, unless verbose flag is on
+	logger.Level(zerolog.InfoLevel)
+	if config.Verbose {
+		logger.Level(zerolog.DebugLevel)
+	}
 
 	logger.Info().
 		Bool("fileLogging", config.FileLoggingEnabled).
@@ -92,6 +104,26 @@ func Configure(config Config) zerolog.Logger {
 	return logger
 }
 
+// Reconfigure reconfigures the already initialized Logger with new values
+func Reconfigure(originalConfig, updatedConfig Config) {
+	if updatedConfig.Verbose {
+		originalConfig.Verbose = updatedConfig.Verbose
+	}
+	if updatedConfig.ConsoleLoggingEnabled {
+		originalConfig.ConsoleLoggingEnabled = updatedConfig.ConsoleLoggingEnabled
+	}
+	if updatedConfig.EncodeLogsAsJson {
+		originalConfig.EncodeLogsAsJson = updatedConfig.EncodeLogsAsJson
+	}
+	if !updatedConfig.FileLoggingEnabled {
+		originalConfig.FileLoggingEnabled = updatedConfig.FileLoggingEnabled
+	}
+	if updatedConfig.ConsoleNoColor {
+		originalConfig.ConsoleNoColor = updatedConfig.ConsoleNoColor
+	}
+	log.Logger = Configure(GlobalConfig)
+}
+
 func newRollingFile(config Config) io.Writer {
 	if err := os.MkdirAll(config.Directory, 0744); err != nil {
 		log.Error().Err(err).Str("path", config.Directory).Msg("can't create logging directory")
@@ -106,30 +138,32 @@ func newRollingFile(config Config) io.Writer {
 	}
 }
 
-// formatLevel is zerolog.Formatter that turns a level value into a string.
-func formatLevel(i interface{}) string {
-	if level, ok := i.(string); ok {
-		switch level {
-		case "trace":
-			return ui.ColorDebug.Sprint("TRC")
-		case "debug":
-			return ui.ColorDebug.Sprint("DBG")
-		case "info":
-			return ui.ColorInfo.Sprint("INF")
-		case "warn":
-			return ui.ColorWarning.Sprint("WRN")
-		case "error":
-			return ui.ColorError.Sprint("ERR")
-		case "fatal":
-			return ui.ColorError.Sprint("FTL")
-		case "panic":
-			return ui.ColorError.Sprint("PNC")
-		default:
-			return ui.ColorInfo.Sprint("???")
+func formatLevel(noColor bool) func(i interface{}) string {
+	// formatLevel is zerolog.Formatter that turns a level value into a string.
+	return func(i interface{}) string {
+		if level, ok := i.(string); ok {
+			switch level {
+			case "trace":
+				return ui.Colorize(ui.ColorTrace, noColor, "TRC")
+			case "debug":
+				return ui.Colorize(ui.ColorDebug, noColor, "DBG")
+			case "info":
+				return ui.Colorize(ui.ColorInfo, noColor, "INF")
+			case "warn":
+				return ui.Colorize(ui.ColorWarning, noColor, "WRN")
+			case "error":
+				return ui.Colorize(ui.ColorError, noColor, "ERR")
+			case "fatal":
+				return ui.Colorize(ui.ColorError, noColor, "FTL")
+			case "panic":
+				return ui.Colorize(ui.ColorErrorBold, noColor, "PNC")
+			default:
+				return ui.Colorize(ui.ColorInfo, noColor, "???")
+			}
 		}
+		if i == nil {
+			return ui.Colorize(ui.ColorInfo, noColor, "???")
+		}
+		return strings.ToUpper(fmt.Sprintf("%s", i))[0:3]
 	}
-	if i == nil {
-		return ui.ColorInfo.Sprint("???")
-	}
-	return strings.ToUpper(fmt.Sprintf("%s", i))[0:3]
 }

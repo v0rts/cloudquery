@@ -5,18 +5,32 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-
 	"path/filepath"
+	"regexp"
+	"strings"
+	"text/template"
+	"time"
 
-	"github.com/cloudquery/cloudquery/pkg/config"
+	"github.com/cloudquery/cloudquery/internal"
+	"github.com/cloudquery/cloudquery/internal/logging"
+	"github.com/cloudquery/cloudquery/pkg/core/state"
+	"github.com/cloudquery/cq-provider-sdk/provider/diag"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
+	"github.com/spf13/cast"
+	"github.com/spf13/viper"
+	"github.com/thoas/go-funk"
 )
 
-var ErrPolicyOrQueryNotFound = errors.New("selected policy/query is not found")
+var ErrPolicyOrQueryNotFound = errors.New("selected policy/query not found")
+
+const (
+	statusError  = "error"
+	statusFailed = "failed"
+	statusPassed = "passed"
+)
 
 type UpdateCallback func(update Update)
 
@@ -25,12 +39,82 @@ type Update struct {
 	PolicyName string
 	// Version is the policy version.
 	Version string
+	// Source policy was fetched from
+	Source string
 	// FinishedQueries is the number queries that have finished evaluating
 	FinishedQueries int
 	// QueriesCount is the amount of queries collected so far
 	QueriesCount int
 	// Error if any returned by the provider
 	Error string
+}
+
+// Executor implements the execution framework.
+type Executor struct {
+	// Connection to the database
+	conn         LowLevelQueryExecer
+	stateManager *state.Client
+	log          hclog.Logger
+
+	PolicyPath []string
+
+	// progressUpdate
+	progressUpdate UpdateCallback
+}
+
+// QueryResult contains the result information from an executed query.
+type QueryResult struct {
+	Name         string    `json:"name"`
+	Description  string    `json:"description"`
+	QueryColumns []string  `json:"-"`
+	Columns      []string  `json:"result_header"`
+	Rows         Rows      `json:"result_rows"`
+	Type         QueryType `json:"type"`
+	Passed       bool      `json:"check_passed"`
+}
+
+type Row struct {
+	// AdditionalData is any extra information that was returned from the result set
+	AdditionalData map[string]interface{} `json:"additional_data,omitempty"`
+	// Identifiers is a map of identifiers as defined by the policy
+	Identifiers map[string]interface{} `json:"identifiers,omitempty"`
+	// Reason is a user readable explanation returned by the query, or interpolated from check defined reason.
+	Reason string `json:"reason,omitempty"`
+	// Status is user defined status of the row i.e OK, ALERT etc'
+	Status string `json:"status,omitempty"`
+}
+type Rows []Row
+
+// ExecutionResult contains all policy execution results.
+type ExecutionResult struct {
+	// PolicyName is the running policy name
+	PolicyName string
+
+	// ExecutionTime is when the policy has been started
+	ExecutionTime time.Time
+
+	// True if all policies have passed
+	Passed bool
+
+	// List of all query result sets
+	Results []*QueryResult
+
+	// Error is the reason the execution failed
+	Error string
+}
+
+// ExecuteRequest is a request that triggers policy execution.
+type ExecuteRequest struct {
+	// Policy is the policy that should be executed.
+	Policy *Policy
+	// StopOnFailure if true policy execution will stop on first failure
+	StopOnFailure bool
+	// UpdateCallback is the console ui update callback
+	UpdateCallback UpdateCallback
+	// PolicyExecution represents the current policy execution
+	PolicyExecution *state.PolicyExecution
+	// DBPersistence defines weather or not to store run results
+	DBPersistence bool
 }
 
 func (f Update) AllDone() bool {
@@ -41,69 +125,38 @@ func (f Update) DoneCount() int {
 	return f.FinishedQueries
 }
 
-// Executor implements the execution framework.
-type Executor struct {
-	// Connection to the database
-	conn *pgxpool.Conn
-	log  hclog.Logger
-
-	PolicyPath []string
-
-	// progressUpdate
-	progressUpdate UpdateCallback
+func (r Rows) Len() int {
+	return len(r)
 }
 
-// QueryResult contains the result information from an executed query.
-type QueryResult struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Columns     []string        `json:"result_headers"`
-	Data        [][]interface{} `json:"result_rows"`
-	Type        QueryType       `json:"type"`
-	Passed      bool            `json:"check_passed"`
+func (r Rows) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
 }
 
-// ExecutionResult contains all policy execution results.
-type ExecutionResult struct {
-	// PolicyName is the running policy name
-	PolicyName string
-
-	// True if all policies have passed
-	Passed bool
-
-	// List of all query result sets
-	Results []*QueryResult
-
-	// Error is the reason the execution failed
-	Error string
-
-	// List of loaded Policies
-	LoadedPolicies Policies
-}
-
-// ExecuteRequest is a request that triggers policy execution.
-type ExecuteRequest struct {
-	// Policy is the policy that should be executed.
-	Policy *config.Policy
-
-	// StopOnFailure if true policy execution will stop on first failure
-	StopOnFailure bool
-
-	// SkipVersioning if true policy will be executed without checking out the version of the policy repo using git tags
-	SkipVersioning bool
-
-	// ProviderVersions describes current versions of providers in use.
-	ProviderVersions map[string]*version.Version
-
-	// UpdateCallback is the console ui update callback
-	UpdateCallback UpdateCallback
+func (r Rows) Less(i, j int) bool {
+	r1 := r[i]
+	r2 := r[j]
+	v1, v2 := make([]string, 0, len(r1.Identifiers)), make([]string, 0, len(r2.Identifiers))
+	for _, v := range r1.Identifiers {
+		v1 = append(v1, cast.ToString(v))
+	}
+	for _, v := range r2.Identifiers {
+		v2 = append(v2, cast.ToString(v))
+	}
+	for l := 0; l < len(v1); l++ {
+		if v1[l] < v2[l] {
+			return true
+		}
+	}
+	return false
 }
 
 // NewExecutor creates a new executor.
-func NewExecutor(conn *pgxpool.Conn, log hclog.Logger, progressUpdate UpdateCallback) *Executor {
+func NewExecutor(conn LowLevelQueryExecer, sta *state.Client, progressUpdate UpdateCallback) *Executor {
 	return &Executor{
 		conn:           conn,
-		log:            log,
+		stateManager:   sta,
+		log:            logging.NewZHcLog(&log.Logger, "policy"),
 		progressUpdate: progressUpdate,
 		PolicyPath:     []string{},
 	}
@@ -114,75 +167,130 @@ func (e *Executor) with(policy string, args ...interface{}) *Executor {
 	policyPath = append(policyPath, policy)
 	return &Executor{
 		conn:           e.conn,
+		stateManager:   e.stateManager,
 		log:            e.log.With("policy", strings.Join(policyPath, "/")).With(args...),
 		progressUpdate: e.progressUpdate,
 		PolicyPath:     policyPath,
 	}
 }
 
-// executePolicy executes given policy and the related sub queries/views.
-func (e *Executor) executePolicy(ctx context.Context, req *ExecuteRequest, policy *Policy, selector []string) (*ExecutionResult, error) {
-	e.log.Debug("Check policy versions", "versions", req.ProviderVersions)
-	if err := e.checkVersions(policy.Config, req.ProviderVersions); err != nil {
-		return nil, fmt.Errorf("%s: %w", policy.Name, err)
+// Execute executes given policy and the related sub queries/views.
+func (e *Executor) Execute(ctx context.Context, req *ExecuteRequest, policy *Policy, identifiers []string) (*ExecutionResult, diag.Diagnostics) {
+	total := ExecutionResult{PolicyName: req.Policy.String(), Passed: true, Results: make([]*QueryResult, 0), ExecutionTime: time.Now()}
+
+	if !policy.HasChecks() {
+		e.log.Warn("no checks or policies to execute")
+		return &total, nil
 	}
-	if err := e.createViews(ctx, policy); err != nil {
-		return nil, err
+
+	if !viper.GetBool("disable-fetch-check") {
+		if err := e.checkFetches(ctx, policy.Config); err != nil {
+			return nil, diag.FromError(err, diag.USER, diag.WithDetails("%s: please run `cloudquery fetch` before running policy", policy.Name))
+		}
 	}
-	var rest []string
-	if len(selector) > 0 {
-		rest = selector[1:]
+	if len(policy.Identifiers) > 0 {
+		identifiers = policy.Identifiers
 	}
-	var found bool
-	total := ExecutionResult{PolicyName: req.Policy.Name, Passed: true, Results: make([]*QueryResult, 0)}
+
 	for _, p := range policy.Policies {
-		if len(selector) == 0 || p.Name == selector[0] {
-			found = true
-			executor := e.with(p.Name)
-			executor.log.Info("starting policy execution")
-			r, err := executor.executePolicy(ctx, req, p, rest)
-			if err != nil {
-				executor.log.Error("failed to execute policy", "err", err)
-				return nil, fmt.Errorf("%s/%w", policy.Name, err)
-			}
-			total.Passed = total.Passed && r.Passed
-			total.Results = append(total.Results, r.Results...)
-			if !total.Passed && req.StopOnFailure {
-				return &total, nil
-			}
-
+		executor := e.with(p.Name)
+		executor.log.Info("starting policy execution")
+		r, err := executor.Execute(ctx, req, p, identifiers)
+		if err != nil {
+			executor.log.Error("failed to execute policy", "err", err)
+			return nil, diag.FromError(fmt.Errorf("%s/%w", policy.Name, err), diag.DATABASE)
+		}
+		total.Passed = total.Passed && r.Passed
+		total.Results = append(total.Results, r.Results...)
+		if !total.Passed && req.StopOnFailure {
+			return &total, nil
 		}
 	}
 
-	for _, q := range policy.Queries {
-		if len(selector) == 0 || q.Name == selector[0] {
-			found = true
-			e.log = e.log.With("query", q.Name)
-			qr, err := e.executeQuery(ctx, q)
-			if err != nil {
-				e.log.Error("failed to execute query", "err", err)
-				return nil, fmt.Errorf("%s/%w", policy.Name, err)
-			}
-			total.Passed = total.Passed && qr.Passed
-			total.Results = append(total.Results, qr)
-			e.log.Info("Query finished with result", "passed", qr.Passed)
-			if e.progressUpdate != nil {
-				e.progressUpdate(Update{
-					FinishedQueries: 1,
-				})
-			}
-			if !total.Passed && req.StopOnFailure {
-				return &total, nil
+	// TODO: A better idea here is to create a new session, create the views, run queries, and close the session.
+	//       This will remove the need for 'deleteViews'.
+	if err := e.createViews(ctx, policy); err != nil {
+		return nil, diag.FromError(fmt.Errorf("%s/%w", policy.Name, err), diag.DATABASE)
+	}
+	defer e.deleteViews(ctx, policy)
+
+	for _, q := range policy.Checks {
+		e.log = e.log.With("query", q.Name)
+		qr, err := e.executeQuery(ctx, q, identifiers)
+		if req.DBPersistence {
+			if errStore := e.createCheckResult(ctx, req.PolicyExecution, q, qr, err); errStore != nil {
+				e.log.Error("failed to create check result", "err", errStore)
 			}
 		}
-	}
-	if !found && len(selector) > 0 {
-		return nil, fmt.Errorf("%s: %w", policy.Name, ErrPolicyOrQueryNotFound)
+		if err != nil {
+			e.log.Error("failed to execute query", "err", err)
+			return nil, diag.FromError(fmt.Errorf("%s/%w", policy.Name, err), diag.DATABASE)
+		}
+		total.Passed = total.Passed && qr.Passed
+		total.Results = append(total.Results, qr)
+		e.log.Info("Check finished with result", "passed", qr.Passed)
+		if e.progressUpdate != nil {
+			e.progressUpdate(Update{
+				FinishedQueries: 1,
+			})
+		}
+		if !total.Passed && req.StopOnFailure {
+			return &total, nil
+		}
 	}
 	return &total, nil
 }
 
-func (*Executor) checkVersions(policyConfig *Configuration, actual map[string]*version.Version) error {
+func (e *Executor) createCheckResult(ctx context.Context, policyExecution *state.PolicyExecution, q *Check, qr *QueryResult, err error) error {
+	if policyExecution == nil {
+		return nil
+	}
+	checkResult := &state.CheckResult{
+		ExecutionId:        policyExecution.Id,
+		ExecutionTimestamp: policyExecution.Timestamp,
+		Name:               q.Name,
+		Selector:           normalizeCheckSelector(policyExecution, e.PolicyPath, q.Name),
+		Description:        q.Title,
+		Status:             statusFailed,
+	}
+	if err != nil {
+		checkResult.Status = statusError
+		checkResult.Error = err.Error()
+		return e.stateManager.CreateCheckResult(ctx, checkResult)
+	}
+	if qr.Passed {
+		checkResult.Status = statusPassed
+	}
+
+	rows := make([]map[string]interface{}, len(qr.Rows))
+	for i, r := range qr.Rows {
+		m := make(map[string]interface{})
+		if len(r.AdditionalData) > 0 {
+			m["data"] = r.AdditionalData
+		}
+		m = internal.FlattenRow(m)
+		if len(r.Identifiers) > 0 {
+			m["cq_identifiers"] = internal.FlattenRow(r.Identifiers)
+		}
+		if r.Reason != "" {
+			m["cq_reason"] = r.Reason
+		}
+		if r.Status != "" {
+			m["cq_status"] = r.Status
+		}
+		rows[i] = m
+	}
+	var byt []byte
+	if byt, err = json.Marshal(rows); err != nil {
+		return err
+	}
+	checkResult.RawResults = string(byt)
+
+	return e.stateManager.CreateCheckResult(ctx, checkResult)
+}
+
+// checkFetches checks if there are fetch reports in database that satisfy providers from policy
+func (e *Executor) checkFetches(ctx context.Context, policyConfig *Configuration) error {
 	if policyConfig == nil {
 		return nil
 	}
@@ -191,19 +299,29 @@ func (*Executor) checkVersions(policyConfig *Configuration, actual map[string]*v
 		if err != nil {
 			return fmt.Errorf("failed to parse version constraint for provider %s: %w", p.Type, err)
 		}
-		v, ok := actual[p.Type]
-		if !ok {
-			return fmt.Errorf("provider %s version %s is not defined in configuration", p.Type, p.Version)
+		fetchSummary, err := e.stateManager.GetFetchSummaryForProvider(ctx, p.Type)
+		if err != nil {
+			return fmt.Errorf("failed to get fetch summary for provider %s: %w", p.Type, err)
 		}
-		if !c.Check(v) {
-			return fmt.Errorf("provider %s does not satisfy version requirement %s", p.Type, c)
+		if fetchSummary == nil {
+			return fmt.Errorf("could not find finished fetches for provider %s", p.Type)
+		}
+		if !fetchSummary.IsSuccess {
+			return fmt.Errorf("last fetch for provider %s wasn't successful. To force the policy execution us the `--disable-fetch-check` flag", p.Type)
+		}
+		v, err := version.NewVersion(fetchSummary.ProviderVersion)
+		if err != nil {
+			return fmt.Errorf("failed to parse version for %s fetch summary: %w", p.Type, err)
+		}
+		if !c.Check(v.Core()) {
+			return fmt.Errorf("the latest fetch for provider %s does not satisfy version requirement %s", p.Type, c)
 		}
 	}
 	return nil
 }
 
 // executeQuery executes the given query and returns the result.
-func (e *Executor) executeQuery(ctx context.Context, q *Query) (*QueryResult, error) {
+func (e *Executor) executeQuery(ctx context.Context, q *Check, identifiers []string) (*QueryResult, error) {
 	e.log.Trace("query", q.Query)
 	data, err := e.conn.Query(ctx, q.Query)
 	if err != nil {
@@ -211,92 +329,120 @@ func (e *Executor) executeQuery(ctx context.Context, q *Query) (*QueryResult, er
 	}
 
 	result := &QueryResult{
-		Name:        q.Name,
-		Description: q.Description,
-		Columns:     make([]string, 0),
-		Data:        make([][]interface{}, 0),
-		Type:        q.Type,
+		Name:         q.Name,
+		Description:  q.Title,
+		QueryColumns: make([]string, 0),
+		Columns:      []string{"status"},
+		Rows:         make([]Row, 0),
+		Type:         q.Type,
 	}
 	for _, fd := range data.FieldDescriptions() {
-		result.Columns = append(result.Columns, string(fd.Name))
+		result.QueryColumns = append(result.QueryColumns, string(fd.Name))
 	}
+
+	var rtpl *template.Template
+	if q.Reason != "" {
+		rtpl, err = template.New("query").Parse(q.Reason)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to to parse reason template")
+		}
+	}
+
+	if len(identifiers) > 0 {
+		result.Columns = append(result.Columns, identifiers...)
+	}
+	result.Columns = append(result.Columns, "reason")
+	result.Columns = append(result.Columns, funk.SubtractString(result.QueryColumns, append([]string{"cq_status", "cq_reason"}, identifiers...))...)
 
 	for data.Next() {
 		values, err := data.Values()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", q.Name, err)
 		}
-		result.Data = append(result.Data, values)
+		row, err := parseRow(result.QueryColumns, values, identifiers, rtpl)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to create reason for check")
+		}
+		result.Rows = append(result.Rows, row)
 	}
 	if data.Err() != nil {
 		return nil, fmt.Errorf("%s: %w", q.Name, data.Err())
 	}
-	result.Passed = (len(result.Data) == 0) == !q.ExpectOutput
+	result.Passed = (len(result.Rows) == 0) == !q.ExpectOutput
 	return result, nil
 }
 
-// createViews creates temporary views for given config.Policy, and any views defined by sub-policies
+// createViews creates temporary views for the given policy (but not for its subpolicies)
 func (e *Executor) createViews(ctx context.Context, policy *Policy) error {
 	for _, v := range policy.Views {
-		e.log.Debug("creating policy view", "view", v.Name)
-		if err := e.createView(ctx, v); err != nil {
-			return fmt.Errorf("%s/%s/%w", policy.Name, v.Name, err)
+		e.log.Info("creating policy view", "view", v.Name, "query", v.Query)
+		if err := e.conn.Exec(ctx, fmt.Sprintf("CREATE TEMPORARY VIEW %s AS %s", v.Name, v.Query)); err != nil {
+			return fmt.Errorf("failed to create view %s/%s: %w", policy.Name, v.Name, err)
 		}
 	}
 	return nil
 }
 
-// createView creates the given view temporary.
-func (e *Executor) createView(ctx context.Context, v *View) error {
-	// Add create view command
-	v.Query.Query = fmt.Sprintf("CREATE OR REPLACE TEMPORARY VIEW %s AS %s", v.Name, v.Query.Query)
+// deleteView deletes the temporary views for the given policy (but not for its subpolicies).
+// This method should be executed in 'defer' statements, so it doesn't return an error.
+func (e *Executor) deleteViews(ctx context.Context, policy *Policy) {
+	for _, v := range policy.Views {
+		// Validate that the view is actually a temp view
+		data, err := e.conn.Query(ctx, fmt.Sprintf("SELECT table_name FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_NAME = '%s' and TABLE_SCHEMA LIKE 'pg_temp%%'", v.Name))
+		if err != nil {
+			e.log.Error("Failed to check if view is temporary", "policy", policy.Name, "view", v.Name, "err", err)
+			continue
+		}
+		count := 0
+		for data.Next() {
+			count++
+		}
+		if data.Err() != nil {
+			e.log.Error("Failed to check if view is temporary", "policy", policy.Name, "view", v.Name, "err", data.Err())
+			continue
+		}
+		// If count is 0 then that means that no temp views with the correct name were found
+		if count == 0 {
+			continue
+		}
 
-	// Create view and ignore the output
-	_, err := e.executeQuery(ctx, v.Query)
-	return err
-}
+		e.log.Info("deleting policy view", "view", v.Name)
 
-func (e *Executor) ExecutePolicies(ctx context.Context, req *ExecuteRequest, policies Policies, selector []string) (*ExecutionResult, error) {
-	var rest []string
-	pnames := make([]string, len(policies))
-	if len(selector) > 0 {
-		rest = selector[1:]
-	}
-	var found bool
-	total := ExecutionResult{PolicyName: req.Policy.Name, Passed: true, Results: make([]*QueryResult, 0)}
-	for i, p := range policies {
-		pnames[i] = p.Name
-		if len(selector) == 0 || selector[0] == p.Name {
-			found = true
-			executor := e.with(p.Name)
-			r, err := executor.executePolicy(ctx, req, p, rest)
-			if err != nil {
-				return nil, err
-			}
-			total.Passed = total.Passed && r.Passed
-			total.Results = append(total.Results, r.Results...)
-			if !total.Passed && req.StopOnFailure {
-				return &total, nil
-			}
+		if err := e.conn.Exec(ctx, fmt.Sprintf("DROP VIEW %s", v.Name)); err != nil {
+			e.log.Error("failed to drop view", "policy", policy.Name, "view", v.Name, "err", err)
+			continue
 		}
 	}
-	if !found && len(selector) > 0 {
-		e.log.Error("policy not found with provided selector", "selector", selector, "policy names", pnames)
-		return nil, ErrPolicyOrQueryNotFound
-	}
-	return &total, nil
 }
 
-func GenerateExecutionResultFile(result *ExecutionResult, outputDir string) error {
+func GenerateExecutionResultFile(result *ExecutionResult, outputDir string) diag.Diagnostics {
 	fs := afero.NewOsFs()
 
 	if err := fs.MkdirAll(outputDir, 0755); err != nil {
-		return err
+		return diag.FromError(
+			err,
+			diag.USER,
+			diag.WithDetails(fmt.Sprintf("failed to create directory %q", outputDir)),
+		)
 	}
 
-	f, err := fs.Create(fmt.Sprintf("%s.json", filepath.Join(outputDir, result.PolicyName)))
+	// result.PolicyName is the full selector for this policy run.
+	// The name of the output file should just be the base policy.
+	// e.g. for "aws//cis_v1.2.0", the output file should be "aws.json"
+	basePolicyName, err := extractFirstPathComponent(result.PolicyName)
 	if err != nil {
-		return err
+		return diag.FromError(err, diag.INTERNAL)
+	}
+
+	filePath := filepath.Join(outputDir, basePolicyName)
+
+	f, err := fs.Create(fmt.Sprintf("%s.json", filePath))
+	if err != nil {
+		return diag.FromError(
+			err,
+			diag.USER,
+			diag.WithDetails(fmt.Sprintf("failed to create file %q", filePath)),
+		)
 	}
 	defer func() {
 		_ = f.Close()
@@ -304,10 +450,71 @@ func GenerateExecutionResultFile(result *ExecutionResult, outputDir string) erro
 
 	data, err := json.Marshal(&result)
 	if err != nil {
-		return err
+		return diag.FromError(err, diag.INTERNAL)
 	}
 	if _, err := f.Write(data); err != nil {
-		return err
+		return diag.FromError(
+			err,
+			diag.USER,
+			diag.WithDetails(fmt.Sprintf("failed to write to file %q", filePath)),
+		)
 	}
+
 	return nil
+}
+
+// extractFirstPathComponent extracts the first path component form a given string.
+// e.g: "a/b/c" -> "a"
+//      "a" -> "a"
+//      "a//b" -> "a"
+func extractFirstPathComponent(str string) (string, error) {
+	regex := regexp.MustCompile(`^([^/]+)(?:/[^/]*)*`)
+
+	matches := regex.FindSubmatch([]byte(str))
+
+	if matches == nil {
+		return "", fmt.Errorf("failed to extract first path component")
+	}
+
+	return string(matches[1]), nil
+}
+
+func parseRow(columns []string, values []interface{}, identifiers []string, reasonTpl *template.Template) (Row, error) {
+	r := Row{
+		AdditionalData: make(map[string]interface{}, len(values)),
+		Identifiers:    make(map[string]interface{}, len(identifiers)),
+		Reason:         "",
+		Status:         statusFailed,
+	}
+
+	for i := 0; i < len(columns); i++ {
+		switch {
+		case columns[i] == "cq_reason":
+			r.Reason = cast.ToString(values[i])
+		case columns[i] == "cq_status":
+			r.Status = cast.ToString(values[i])
+		case funk.InStrings(identifiers, columns[i]):
+			r.Identifiers[columns[i]] = values[i]
+		default:
+			r.AdditionalData[columns[i]] = values[i]
+		}
+	}
+
+	if r.Reason == "" && reasonTpl != nil {
+		var b strings.Builder
+		if err := reasonTpl.Execute(&b, r.AdditionalData); err != nil {
+			return r, err
+		}
+		r.Reason = b.String()
+	}
+	return r, nil
+}
+
+func normalizeCheckSelector(policyExecution *state.PolicyExecution, policyPath []string, checkName string) string {
+	selector := []string{policyExecution.PolicyName}
+	if !strings.HasPrefix(selector[0], policyExecution.Location+"//") {
+		selector[0] = policyExecution.Location + "/"
+	}
+	selector = append(selector, policyPath...)
+	return strings.Join(append(selector, checkName), "/")
 }

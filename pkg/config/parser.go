@@ -1,11 +1,13 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
+	"net/url"
 	"strings"
 
+	"github.com/cloudquery/cloudquery/pkg/config/convert"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/spf13/afero"
@@ -16,8 +18,7 @@ import (
 type SourceType string
 
 const (
-	SourceJSON = "json"
-	SourceHCL  = "hcl"
+	SourceHCL = "hcl"
 )
 
 // EnvVarPrefix is a prefix for environment variable names to be exported for HCL substitution.
@@ -36,9 +37,9 @@ type Parser struct {
 
 type Option func(*Parser)
 
-func WithFS(fs afero.Fs) Option {
+func WithFS(aferoFs afero.Fs) Option {
 	return func(p *Parser) {
-		p.fs = afero.Afero{Fs: fs}
+		p.fs = afero.Afero{Fs: aferoFs}
 	}
 }
 
@@ -48,6 +49,13 @@ func WithFS(fs afero.Fs) Option {
 func WithEnvironmentVariables(prefix string, vars []string) Option {
 	return func(p *Parser) {
 		EnvToHCLContext(&p.HCLContext, prefix, vars)
+	}
+}
+
+// WithFileFunc adds the file() function to the parser.
+func WithFileFunc(basePath string) Option {
+	return func(p *Parser) {
+		p.HCLContext.Functions["file"] = convert.MakeFileFunc(basePath)
 	}
 }
 
@@ -79,14 +87,37 @@ func NewParser(options ...Option) *Parser {
 // callers may wish to ignore the provided error diagnostics and produce
 // a more context-sensitive error instead.
 //
-// The file will be parsed using the HCL native syntax unless the filename
-// ends with ".json", in which case the HCL JSON syntax will be used.
+// The file will be parsed using the HCL native syntax
 func (p *Parser) LoadHCLFile(path string) (hcl.Body, hcl.Diagnostics) {
-	src, err := p.fs.ReadFile(path)
+	var contents []byte
+	// Example of path supported paths:
+	// `./local/relative/path/to/config.hcl`
+	// `/absolute/path/to/config.hcl`
+	// `s3://object/in/remote/location/absolute/path/to/config.hcl`
+	sanitizedPath, err := url.Parse(path)
+	if err != nil {
+		return nil, hcl.Diagnostics{
+			{
+				Severity: hcl.DiagError,
+				Summary:  "Failed to load config file: invalid path",
+				Detail:   fmt.Sprintf("The file %q could not be read: %s", path, err),
+			},
+		}
+	}
+
+	if sanitizedPath.Scheme == "" {
+		contents, err = p.fs.ReadFile(path)
+	} else {
+		contents, err = loadRemoteFile(path)
+	}
 
 	if err != nil {
 		if e, ok := err.(*fs.PathError); ok {
-			err = fmt.Errorf(e.Err.Error())
+			if errors.Is(err, fs.ErrNotExist) {
+				err = fmt.Errorf("%s. Hint: Try `cloudquery init <provider>`", e.Err.Error())
+			} else {
+				err = fmt.Errorf(e.Err.Error())
+			}
 		}
 		return nil, hcl.Diagnostics{
 			{
@@ -96,18 +127,12 @@ func (p *Parser) LoadHCLFile(path string) (hcl.Body, hcl.Diagnostics) {
 			},
 		}
 	}
-	return p.loadFromSource(path, src, SourceType(filepath.Ext(path)))
+
+	return p.LoadFromSource(path, contents)
 }
 
-func (p *Parser) loadFromSource(name string, data []byte, ext SourceType) (hcl.Body, hcl.Diagnostics) {
-	var file *hcl.File
-	var diags hcl.Diagnostics
-	switch ext {
-	case SourceJSON:
-		file, diags = p.p.ParseJSON(data, name)
-	default:
-		file, diags = p.p.ParseHCL(data, name)
-	}
+func (p *Parser) LoadFromSource(name string, data []byte) (hcl.Body, hcl.Diagnostics) {
+	file, diags := p.p.ParseHCL(data, name)
 	// If the returned file or body is nil, then we'll return a non-nil empty
 	// body so we'll meet our contract that nil means an error reading the file.
 	if file == nil || file.Body == nil {
@@ -115,10 +140,6 @@ func (p *Parser) loadFromSource(name string, data []byte, ext SourceType) (hcl.B
 	}
 
 	return file.Body, diags
-}
-
-func (p *Parser) LoadFromSource(name string, data []byte, ext SourceType) (hcl.Body, hcl.Diagnostics) {
-	return p.loadFromSource(name, data, ext)
 }
 
 func EnvToHCLContext(evalContext *hcl.EvalContext, prefix string, vars []string) {

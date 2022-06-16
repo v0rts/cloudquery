@@ -4,10 +4,6 @@ import (
 	"encoding/json"
 )
 
-const (
-	StateVersion = 4
-)
-
 // Hashicorp terraform state v4
 // https://github.com/hashicorp/terraform/blob/main/internal/states/statefile/version4.go
 
@@ -16,7 +12,7 @@ type Data struct {
 }
 
 type State struct {
-	Version          uint64                 `json:"version"`
+	Version          *json.RawMessage       `json:"version"`
 	TerraformVersion string                 `json:"terraform_version"`
 	Serial           uint64                 `json:"serial"`
 	Lineage          string                 `json:"lineage"`
@@ -48,7 +44,7 @@ type Instance struct {
 	SchemaVersion           uint64            `json:"schema_version"`
 	AttributesRaw           json.RawMessage   `json:"attributes,omitempty"`
 	AttributesFlat          map[string]string `json:"attributes_flat,omitempty"`
-	AttributeSensitivePaths json.RawMessage   `json:"sensitive_attributes,omitempty,"`
+	AttributeSensitivePaths json.RawMessage   `json:"sensitive_attributes,omitempty"`
 
 	PrivateRaw []byte `json:"private,omitempty"`
 
@@ -61,9 +57,4 @@ type Mode string
 
 const (
 	ModeManaged Mode = "managed"
-	ModeData    Mode = "data"
 )
-
-func (m Mode) Valid() bool {
-	return m == ModeManaged || m == ModeData
-}

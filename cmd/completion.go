@@ -19,8 +19,8 @@ import (
 	"context"
 	"os"
 
+	"github.com/cloudquery/cloudquery/pkg/errors"
 	"github.com/cloudquery/cloudquery/pkg/ui/console"
-
 	"github.com/spf13/cobra"
 )
 
@@ -82,6 +82,7 @@ PS> cloudquery completion powershell > cloudquery.ps1
 		case "powershell":
 			err = cmd.Root().GenPowerShellCompletion(os.Stdout)
 		}
+		errors.CaptureError(err, map[string]string{"command": "completion"})
 		return err
 	}),
 }

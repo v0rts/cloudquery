@@ -1,3 +1,4 @@
+# DO NOT EDIT. This file is synced from https://github.com/cloudquery/.github/.github
 name: test
 
 on:
@@ -5,13 +6,17 @@ on:
     branches:
       - main
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+env:
+  CGO_ENABLED: 0
+  CQ_NO_TELEMETRY: 1
 
 jobs:
   unitests:
     strategy:
       matrix:
-        dbversion: ['postgres:latest']
+        dbversion: ['postgres:10']
         go: ['1.17']
         platform: [ ubuntu-latest]
     runs-on: ${{ matrix.platform }}
@@ -32,29 +37,38 @@ jobs:
           --health-retries 5
     steps:
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: ^1.17
-
+          go-version: ^${{ matrix.go }}
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          # * Build cache (Mac)
+          # * Build cache (Windows)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/Library/Caches/go-build
+            ~\AppData\Local\go-build
+          key: ${{ runner.os }}-go-${{ matrix.go }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go }}-
 
       - name: Get dependencies
-        run: |
-          go get -v -t -d ./...
+        run: go get -v -t -d ./...
 
       - name: Build
         run: go build -v .
 
       - name: Sanity Fetch
-        run: go run ./main.go fetch --config=internal/test/test_config.hcl --enable-console-log
-        env:
-          CQ_NO_TELEMETRY: 1
+        run: go run ./main.go fetch --config=internal/test/test_config.hcl --enable-console-log --fail-on-error
 
       - name: Sanity Init
         run: go run ./main.go init test --config=test_init_config.hcl
-        env:
-          CQ_NO_TELEMETRY: 1
 
       - name: Test
         run: go test -v ./...

@@ -1,29 +1,31 @@
 package config
 
 import (
+	"errors"
 	"fmt"
-	"os"
+	"path/filepath"
+	"strings"
 
-	"github.com/creasty/defaults"
+	"github.com/cloudquery/cloudquery/internal/logging"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/spf13/viper"
 )
 
-func (p *Parser) loadConfigFromSource(name string, data []byte, source SourceType) (*Config, hcl.Diagnostics) {
-	body, diags := p.loadFromSource(name, data, source)
+func (p *Parser) LoadConfigFromSource(name string, data []byte) (*Config, hcl.Diagnostics) {
+	if strings.HasSuffix(name, ".json") {
+		// we dropped support for json so error out with an explainable message
+		return nil, hcl.Diagnostics{{
+			Severity: hcl.DiagError,
+			Summary:  `json is not supported please use hcl format`,
+			Detail:   `json is not supported please use hcl format`,
+		}}
+	}
+	body, diags := p.LoadFromSource(name, data)
 	if body == nil {
 		return nil, diags
 	}
 	return p.decodeConfig(body, diags)
-}
-
-func (p *Parser) LoadConfigFromSource(name string, data []byte) (*Config, hcl.Diagnostics) {
-	return p.loadConfigFromSource(name, data, SourceHCL)
-}
-
-func (p *Parser) LoadConfigFromJson(name string, data []byte) (*Config, hcl.Diagnostics) {
-	return p.loadConfigFromSource(name, data, SourceJSON)
 }
 
 func (p *Parser) LoadConfigFile(path string) (*Config, hcl.Diagnostics) {
@@ -41,45 +43,16 @@ func (p *Parser) decodeConfig(body hcl.Body, diags hcl.Diagnostics) (*Config, hc
 	content, contentDiags := body.Content(configFileSchema)
 	diags = append(diags, contentDiags...)
 
+	hasPolicyBlock := false
+
 	for _, block := range content.Blocks {
 		switch block.Type {
 		case "cloudquery":
-			contentDiags = gohcl.DecodeBody(block.Body, &p.HCLContext, &config.CloudQuery)
-			diags = append(diags, contentDiags...)
-			// TODO: decode in a more generic way
-
-			if config.CloudQuery.Connection == nil {
-				config.CloudQuery.Connection = &Connection{
-					DSN: "",
-				}
-			}
-			if config.CloudQuery.History != nil {
-				if err := defaults.Set(config.CloudQuery.History); err != nil {
-					diags = append(diags, &hcl.Diagnostic{Severity: hcl.DiagError, Summary: "failed to set defaults in history"})
-				}
-			}
-
-			if dsn := viper.GetString("dsn"); dsn != "" {
-				config.CloudQuery.Connection.DSN = dsn
-			}
-			if dir := viper.GetString("plugin-dir"); dir != "." {
-				if dir == "." {
-					if dir, err := os.Getwd(); err == nil {
-						config.CloudQuery.PluginDirectory = dir
-					}
-				} else {
-					config.CloudQuery.PluginDirectory = dir
-				}
-			}
-			if dir := viper.GetString("policy-dir"); dir != "" {
-				if dir == "." {
-					if dir, err := os.Getwd(); err != nil {
-						config.CloudQuery.PolicyDirectory = dir
-					}
-				} else {
-					config.CloudQuery.PolicyDirectory = dir
-				}
-			}
+			cliLoggingConfig := logging.GlobalConfig
+			cqBlock, cqDiags := decodeCloudQueryBlock(block, &p.HCLContext)
+			logging.Reconfigure(*cqBlock.Logger, cliLoggingConfig)
+			diags = diags.Extend(cqDiags)
+			config.CloudQuery = cqBlock
 		case "provider":
 			cfg, cfgDiags := decodeProviderBlock(block, &p.HCLContext, existingProviders)
 			diags = append(diags, cfgDiags...)
@@ -87,11 +60,7 @@ func (p *Parser) decodeConfig(body hcl.Body, diags hcl.Diagnostics) (*Config, hc
 				config.Providers = append(config.Providers, cfg)
 			}
 		case "policy":
-			cfg, cfgDiags := decodePolicyConfigBlock(block, &p.HCLContext)
-			diags = append(diags, cfgDiags...)
-			if cfg != nil {
-				config.Policies = append(config.Policies, cfg)
-			}
+			hasPolicyBlock = true
 		case "modules":
 			// Module manager will process this for us
 			config.Modules = block.Body
@@ -101,6 +70,17 @@ func (p *Parser) decodeConfig(body hcl.Body, diags hcl.Diagnostics) (*Config, hc
 			continue
 		}
 	}
+
+	if hasPolicyBlock {
+		diags = append(diags,
+			&hcl.Diagnostic{
+				Severity: hcl.DiagWarning,
+				Summary:  "Deprecated 'policy' block in config file",
+				Detail:   "Specifying 'policy' blocks in 'config.hcl' has been deprecated. See https://docs.cloudquery.io/docs/tutorials/policies/policies-overview for instructions on running policies (either from cloudquery-hub or a local file).",
+			},
+		)
+	}
+
 	return config, diags
 }
 
@@ -138,4 +118,65 @@ func ReadModuleConfigProfiles(module string, block hcl.Body) (map[string]hcl.Bod
 		ret[content.Blocks[i].Labels[0]] = content.Blocks[i].Body
 	}
 	return ret, nil
+}
+
+func decodeCloudQueryBlock(block *hcl.Block, ctx *hcl.EvalContext) (CloudQuery, hcl.Diagnostics) {
+	var cq CloudQuery
+	// Pre-populate with existing values
+	cq.Logger = &logging.GlobalConfig
+	var diags hcl.Diagnostics
+	diags = diags.Extend(gohcl.DecodeBody(block.Body, ctx, &cq))
+
+	// TODO: decode in a more generic way
+	if cq.Connection == nil {
+		cq.Connection = &Connection{}
+	}
+
+	if err := handleConnectionBlock(cq.Connection); err != nil {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Invalid DSN configuration",
+			Detail:   err.Error(),
+			Subject:  &block.DefRange,
+		})
+	}
+
+	datadir := viper.GetString("data-dir")
+
+	if datadir != "" {
+		cq.PluginDirectory = filepath.Join(datadir, "providers")
+	}
+
+	if datadir != "" {
+		cq.PolicyDirectory = filepath.Join(datadir, "policies")
+	}
+
+	// validate provider versions
+	for _, cp := range cq.Providers {
+		if cp.Version != "latest" && !strings.HasPrefix(cp.Version, "v") {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  fmt.Sprintf("Provider %s version %s is invalid", cp.Name, cp.Version),
+				Detail:   "Please set to 'latest' version or valid semantic versioning starting with vX.Y.Z",
+				Subject:  &block.DefRange,
+			})
+		}
+	}
+	return cq, diags
+}
+
+func handleConnectionBlock(c *Connection) error {
+	if ds := viper.GetString("dsn"); ds != "" {
+		c.DSN = ds
+		return nil
+	}
+
+	if c.DSN != "" {
+		if c.IsAnyConnParamsSet() {
+			return errors.New("DSN specified along with explicit attributes, only one type is supported")
+		}
+		return nil
+	}
+
+	return c.BuildFromConnParams()
 }

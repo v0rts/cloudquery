@@ -6,21 +6,20 @@ import (
 	"reflect"
 
 	"github.com/cloudquery/cloudquery/internal/logging/keyvals"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/rs/zerolog"
 )
-
-// NewZHcLog Creates hclog.Logger adapter from a zerolog log
-func NewZHcLog(l *zerolog.Logger, name string) hclog.Logger {
-	return &ZerologKVAdapter{l, name, nil}
-}
 
 type ZerologKVAdapter struct {
 	l    *zerolog.Logger
 	name string
 
 	impliedArgs []interface{}
+}
+
+// NewZHcLog Creates hclog.Logger adapter from a zerolog log
+func NewZHcLog(l *zerolog.Logger, name string) hclog.Logger {
+	return &ZerologKVAdapter{l, name, nil}
 }
 
 func (z ZerologKVAdapter) Log(level hclog.Level, msg string, args ...interface{}) {
@@ -61,32 +60,31 @@ func (z ZerologKVAdapter) Error(msg string, args ...interface{}) {
 }
 
 func (z ZerologKVAdapter) IsTrace() bool {
-	return z.l.GetLevel() >= zerolog.TraceLevel
+	return z.l.GetLevel() <= zerolog.TraceLevel
 }
 
 func (z ZerologKVAdapter) IsDebug() bool {
-	return z.l.GetLevel() >= zerolog.DebugLevel
+	return z.l.GetLevel() <= zerolog.DebugLevel
 }
 
 func (z ZerologKVAdapter) IsInfo() bool {
-	return z.l.GetLevel() >= zerolog.InfoLevel
+	return z.l.GetLevel() <= zerolog.InfoLevel
 }
 
 func (z ZerologKVAdapter) IsWarn() bool {
-	return z.l.GetLevel() >= zerolog.WarnLevel
+	return z.l.GetLevel() <= zerolog.WarnLevel
 }
 
 func (z ZerologKVAdapter) IsError() bool {
-	return z.l.GetLevel() >= zerolog.ErrorLevel
+	return z.l.GetLevel() <= zerolog.ErrorLevel
 }
 
-func (z ZerologKVAdapter) ImpliedArgs() []interface{} {
+func (ZerologKVAdapter) ImpliedArgs() []interface{} {
 	// Not supported
 	return nil
 }
 
 func (z ZerologKVAdapter) With(args ...interface{}) hclog.Logger {
-
 	l := z.l.With().Fields(keyvals.ToMap(args)).Logger()
 	return NewZHcLog(&l, z.Name())
 }

@@ -5,29 +5,29 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
+	"github.com/cloudquery/cloudquery/pkg/core"
+	"github.com/cloudquery/cloudquery/pkg/module"
+	"github.com/cloudquery/cloudquery/pkg/module/drift/terraform"
+	"github.com/cloudquery/cq-provider-sdk/cqproto"
+	"github.com/cloudquery/cq-provider-sdk/provider/execution"
+	cqschema "github.com/cloudquery/cq-provider-sdk/provider/schema"
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/georgysavva/scany/pgxscan"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
-
-	"github.com/cloudquery/cloudquery/pkg/module"
-	"github.com/cloudquery/cloudquery/pkg/module/drift/terraform"
 )
 
 type Drift struct {
-	logger hclog.Logger
-	config *BaseConfig
-
-	params RunParams
-
+	config   *BaseConfig
+	params   RunParams
 	tableMap map[string]resourceMap // one map per provider, initiated on first use
 }
 
@@ -38,7 +38,17 @@ type iacProvider string
 const (
 	iacTerraform      iacProvider = "terraform"
 	iacCloudformation iacProvider = "cloudformation"
+
+	compatibleProtoVersion = 1
+	protoVersion           = 2
 )
+
+const idSeparator = "|"
+
+var idRegEx = regexp.MustCompile(`(?ms)^\$\{sql:(.+?)\}$`)
+
+// Make sure we satisfy the interface
+var _ module.Module = (*Drift)(nil)
 
 func (i iacProvider) String() string {
 	switch i {
@@ -51,25 +61,27 @@ func (i iacProvider) String() string {
 	}
 }
 
-func New(logger hclog.Logger) *Drift {
-	return &Drift{
-		logger: logger,
-	}
+func New() *Drift {
+	return &Drift{}
 }
 
-func (d *Drift) ID() string {
+func (*Drift) ID() string {
 	return "drift"
 }
 
-func (d *Drift) Configure(ctx context.Context, profileConfig hcl.Body, runParams module.ModuleRunParams) error {
+func (*Drift) ProtocolVersions() []uint32 {
+	return []uint32{protoVersion, compatibleProtoVersion}
+}
+
+func (d *Drift) Configure(ctx context.Context, info module.Info, runParams module.RunParams) error {
 	d.params = runParams.(RunParams)
 
-	builtin, err := d.readBuiltinConfig()
+	builtin, err := d.readBaseConfig(info.ProtocolVersion, info.ProviderData)
 	if err != nil {
 		return fmt.Errorf("builtin config failed: %w", err)
 	}
 
-	d.config, err = d.readProfileConfig(builtin, profileConfig)
+	d.config, err = d.readProfileConfig(builtin, info.UserConfig)
 	if err != nil {
 		return fmt.Errorf("read config failed: %w", err)
 	}
@@ -87,7 +99,18 @@ func (d *Drift) Execute(ctx context.Context, req *module.ExecuteRequest) *module
 	return ret
 }
 
-func (d *Drift) ExampleConfig() string {
+func (*Drift) ExampleConfig(providers []string) string {
+	hasAws := false
+	for i := range providers {
+		if providers[i] == "aws" {
+			hasAws = true
+			break
+		}
+	}
+	if !hasAws {
+		return ""
+	}
+
 	return `// drift configuration block
 drift "drift-example" {
   // state block defines from where to access the state
@@ -114,7 +137,11 @@ drift "drift-example" {
 }`
 }
 
-func (d *Drift) readBuiltinConfig() (*BaseConfig, error) {
+func (*Drift) readBaseConfig(version uint32, providerData map[string]cqproto.ModuleInfo) (*BaseConfig, error) {
+	if version != protoVersion && version != compatibleProtoVersion {
+		return nil, fmt.Errorf("unsupported module protocol version %d", version)
+	}
+
 	configRaw, diags := hclparse.NewParser().ParseHCL(builtinConfig, "")
 	if diags.HasErrors() {
 		return nil, diags
@@ -130,29 +157,44 @@ func (d *Drift) readBuiltinConfig() (*BaseConfig, error) {
 	if diags.HasErrors() {
 		return nil, diags
 	}
-	if len(content.Blocks) != 1 {
-		return nil, fmt.Errorf("unexpected number of blocks")
+	if l := len(content.Blocks); l != 1 {
+		return nil, fmt.Errorf("unexpected number of blocks (%d)", l)
 	}
 
 	p := NewParser("")
-	cfg, diags := p.Decode(content.Blocks[0].Body, nil)
+	cfg, diags := p.Decode(content.Blocks[0].Body, "", nil)
 	if diags.HasErrors() {
 		return nil, diags
 	}
+
+	for provider, modInfo := range providerData {
+		hc, diags := module.GetCombinedHCL(modInfo)
+		provCfg, diags := p.Decode(hc, provider, diags)
+		if diags.HasErrors() {
+			return nil, diags
+		}
+		if l := len(provCfg.Providers); l != 1 {
+			return nil, fmt.Errorf("unexpected number of provider blocks (%s: %d)", provider, l)
+		}
+		cfg.Providers = append(cfg.Providers, provCfg.Providers...)
+	}
+
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
 	return cfg, nil
 }
 
-func (d *Drift) readProfileConfig(base *BaseConfig, body hcl.Body) (*BaseConfig, error) {
+func (*Drift) readProfileConfig(base *BaseConfig, body hcl.Body) (*BaseConfig, error) {
 	p := NewParser("")
 
 	if body == nil {
-		if diags := p.interpret(base); diags.HasErrors() {
-			return nil, diags
-		}
+		p.interpret(base)
 		return base, nil
 	}
 
-	cfg, diags := p.Decode(body, nil)
+	cfg, diags := p.Decode(body, "", nil)
 	if diags.HasErrors() {
 		return nil, diags
 	}
@@ -189,15 +231,12 @@ func (d *Drift) readProfileConfig(base *BaseConfig, body hcl.Body) (*BaseConfig,
 		}
 	}
 
-	if diags := p.interpret(base); diags.HasErrors() {
-		return nil, diags
-	}
-
+	p.interpret(base)
 	return base, nil
 }
 
 func (d *Drift) run(ctx context.Context, req *module.ExecuteRequest) (*Results, error) {
-	iacProv, iacStates, err := readIACStates(string(iacTerraform), d.config.Terraform, d.params.StateFiles)
+	iacProv, iacStates, err := readIACStates(iacTerraform, d.config.Terraform, d.params.StateFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -209,16 +248,19 @@ func (d *Drift) run(ctx context.Context, req *module.ExecuteRequest) (*Results, 
 	}
 
 	for _, cfg := range d.config.Providers {
-		schema, err := d.findProvider(cfg, req.Providers)
+		schema, err := d.findProvider(cfg, req.Schemas)
 		if err != nil {
 			return nil, err
 		} else if schema == nil {
 			continue
 		}
 
-		d.logger.Debug("Processing for provider", "provider", schema.Name, "config", cfg)
+		log.Debug().Str("provider", schema.Name).Interface("config", cfg).Msg("Processing for provider")
 
-		resources := cfg.interpolatedResourceMap(iacProv, d.logger)
+		resources := cfg.interpolatedResourceMap(iacProv)
+		if d.params.Debug {
+			listUnimplementedResources(resources, schema)
+		}
 
 		// Always process in the same order so both results and error messages are consistent
 		for _, resName := range cfg.resourceKeys() {
@@ -228,11 +270,13 @@ func (d *Drift) run(ctx context.Context, req *module.ExecuteRequest) (*Results, 
 			}
 			pr := d.lookupResource(resName, schema)
 			if pr == nil {
-				d.logger.Warn("Skipping resource, lookup failed", "resource", resName)
+				log.Warn().Str("resoruce", resName).Msg("Skipping resource, lookup failed")
 				continue
 			}
 
-			d.logger.Debug("Running for provider and resource", "provider", schema.Name+":"+resName, "table", pr.Name, "ids", res.Identifiers, "attributes", res.Attributes, "iac_type", res.IAC[iacProv].Type)
+			log.Debug().Str("provider", schema.Name+":"+resName).Strs("ids", res.Identifiers).
+				Strs("attributes", res.Attributes).Str("iac_type", res.IAC[iacProv].Type).
+				Msg("Running for provider and resource")
 
 			// Drift per resource
 			var (
@@ -241,7 +285,7 @@ func (d *Drift) run(ctx context.Context, req *module.ExecuteRequest) (*Results, 
 			)
 			switch iacProv {
 			case iacTerraform:
-				dres, err = driftTerraform(ctx, d.logger, req.Conn, schema.Name, pr, resName, resources, res.IAC[iacProv], iacStates.([]*terraform.Data), d.params, cfg.AccountIDs)
+				dres, err = driftTerraform(ctx, req.Conn, schema.Name, pr, resName, resources, res.IAC[iacProv], iacStates.([]*terraform.Data), d.params, cfg.AccountIDs)
 			default:
 				err = fmt.Errorf("no suitable handler found for %q", iacProv)
 			}
@@ -260,12 +304,40 @@ func (d *Drift) run(ctx context.Context, req *module.ExecuteRequest) (*Results, 
 	return resList, nil
 }
 
-func queryIntoResourceList(ctx context.Context, logger hclog.Logger, conn *pgxpool.Conn, sel *goqu.SelectDataset) (ResourceList, error) {
+func listUnimplementedResources(resources map[string]*ResourceConfig, provSchema *core.ProviderSchema) {
+	var (
+		res, subRes []string
+	)
+	for nm, tabl := range provSchema.ResourceTables {
+		if _, found := resources[nm]; !found {
+			res = append(res, nm)
+		}
+		for _, rel := range tabl.Relations {
+			subRes = append(subRes, listUnimplementedResourcesInner(resources, nm+":", rel)...)
+		}
+	}
+	sort.Strings(res)
+	sort.Strings(subRes)
+	log.Debug().Strs("resources", res).Strs("sub-resources", subRes).Msg("not implemented resources & subresources")
+}
+
+func listUnimplementedResourcesInner(resources map[string]*ResourceConfig, upper string, t *cqschema.Table) []string {
+	var ret []string
+	if _, found := resources[t.Name]; !found {
+		ret = append(ret, upper+t.Name)
+	}
+	for _, rel := range t.Relations {
+		ret = append(ret, listUnimplementedResourcesInner(resources, upper+t.Name+":", rel)...)
+	}
+	return ret
+}
+
+func queryIntoResourceList(ctx context.Context, conn execution.QueryExecer, sel *goqu.SelectDataset) (ResourceList, error) {
 	query, args, err := sel.ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("goqu build failed: %w", err)
 	}
-	logger.Trace("generated query", "query", query, "args", args)
+	log.Trace().Str("query", query).Interface("args", args).Msg("generated query")
 
 	var list []struct {
 		ID      *string           `db:"id"`
@@ -279,7 +351,7 @@ func queryIntoResourceList(ctx context.Context, logger hclog.Logger, conn *pgxpo
 			return nil, fmt.Errorf("cloud provider tables don't exist: Did you run `cloudquery fetch`? %w", pgErr)
 		}
 
-		logger.Warn("query failed with error", "query", query, "args", args, "error", err)
+		log.Warn().Err(err).Str("query", query).Interface("args", args).Msg("query failed with error")
 		return nil, fmt.Errorf("goqu select failed: %w", err)
 	}
 
@@ -300,12 +372,12 @@ func queryIntoResourceList(ctx context.Context, logger hclog.Logger, conn *pgxpo
 	return ret, nil
 }
 
-func handleSubresource(logger hclog.Logger, sel *goqu.SelectDataset, pr *traversedTable, resources map[string]*ResourceConfig, accountIDs []string) *goqu.SelectDataset {
+func handleSubresource(sel *goqu.SelectDataset, pr *traversedTable, _ map[string]*ResourceConfig, accountIDs []string) *goqu.SelectDataset {
 	parentColumn := pr.ParentIDColumn()
 
 	if parentColumn == "" {
 		if pr.Parent != nil {
-			logger.Error("parent set but no parentColumn for table", "table", pr.Table.Name)
+			log.Error().Str("table", pr.Table.Name).Msg("parent set but no parentColumn for table")
 		}
 
 		if len(accountIDs) > 0 {
@@ -319,7 +391,7 @@ func handleSubresource(logger hclog.Logger, sel *goqu.SelectDataset, pr *travers
 		return sel
 	}
 	if pr.Parent == nil {
-		logger.Warn("parentColumn set but no parent for table", "table", pr.Table.Name)
+		log.Error().Str("table", pr.Table.Name).Msg("parentColumn set but no parent for table")
 		return sel
 	}
 
@@ -328,14 +400,7 @@ func handleSubresource(logger hclog.Logger, sel *goqu.SelectDataset, pr *travers
 	parentCounter := 0
 	parentTableName := "parent"
 	childTableName := "c"
-	var res *ResourceConfig
 	for pr.Parent != nil {
-		res = resources[pr.Name]
-		if res == nil {
-			logger.Warn("Found parent but no resourceConfig", "table", pr.Table.Name)
-			return sel // FIXME we're skipping the account_id filter here by returning
-		}
-
 		if parentCounter > 0 {
 			parentTableName = fmt.Sprintf("parent%d", parentCounter)
 		}
@@ -373,10 +438,6 @@ func handleFilters(sel *goqu.SelectDataset, res *ResourceConfig) *goqu.SelectDat
 	return sel
 }
 
-var idRegEx = regexp.MustCompile(`(?ms)^\$\{sql:(.+?)\}$`)
-
-const idSeparator = "|"
-
 // handleIdentifiers returns an SQL expression given one or multiple identifiers. the `sql(<query>)` is also handled here.
 // Given multiple identifiers, each of them are concatenated using the idSeparator
 func handleIdentifiers(identifiers []string) (exp.Expression, error) {
@@ -412,8 +473,8 @@ func handleIdentifiers(identifiers []string) (exp.Expression, error) {
 	return goqu.L("CONCAT(" + strings.Join(concatArgs[:len(concatArgs)-1], ",") + ") AS id"), nil
 }
 
-func readIACStates(iacID string, tf *TerraformSourceConfig, stateFiles []string) (iacProvider, interface{}, error) {
-	if iacProvider(iacID) != iacTerraform {
+func readIACStates(iacID iacProvider, tf *TerraformSourceConfig, stateFiles []string) (iacProvider, interface{}, error) {
+	if iacID != iacTerraform {
 		return "", nil, fmt.Errorf("unknown IAC %q", iacID)
 	}
 
@@ -426,7 +487,7 @@ func readIACStates(iacID string, tf *TerraformSourceConfig, stateFiles []string)
 		case TFLocal:
 			stateFiles = tf.Files
 		case TFS3:
-			states, err := loadIACStatesFromS3(iacID, tf.Bucket, tf.Keys, tf.Region, tf.RoleARN)
+			states, err := loadIACStatesFromS3(string(iacID), tf.Bucket, tf.Keys, tf.Region, tf.RoleARN)
 			if err != nil {
 				return "", nil, err
 			}
@@ -458,6 +519,14 @@ func readIACStates(iacID string, tf *TerraformSourceConfig, stateFiles []string)
 			if err != nil {
 				return "", nil, fmt.Errorf("parse %s: %w", fn, err)
 			}
+			if ok, err := terraform.ValidateStateVersion(data); err != nil {
+				if !ok {
+					return "", nil, fmt.Errorf("validate %s: %w", fn, err)
+				}
+				log.Warn().Err(err).Msg("ValidateStateVersion")
+			} else if !ok {
+				return "", nil, fmt.Errorf("validate %s: failed", fn)
+			}
 
 			ret = append(ret, data)
 		}
@@ -469,6 +538,3 @@ func readIACStates(iacID string, tf *TerraformSourceConfig, stateFiles []string)
 
 	return iacTerraform, ret, nil
 }
-
-// Make sure we satisfy the interface
-var _ module.Module = (*Drift)(nil)

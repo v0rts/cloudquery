@@ -6,15 +6,53 @@ import (
 	"github.com/cloudquery/cloudquery/pkg/config/convert"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
 type Provider struct {
-	Name               string   `hcl:"name,label"`
-	Alias              string   `hcl:"alias,optional"`
-	EnablePartialFetch bool     `hcl:"enable_partial_fetch,optional"`
-	Resources          []string `hcl:"resources,optional"`
-	Env                []string `hcl:"env,optional"`
-	Configuration      []byte
+	Name                          string   `hcl:"name,label"`
+	Alias                         string   `hcl:"alias,optional"`
+	Resources                     []string `hcl:"resources,optional"`
+	SkipResources                 []string `hcl:"skip_resources,optional"`
+	Env                           []string `hcl:"env,optional"`
+	Configuration                 []byte
+	MaxParallelResourceFetchLimit uint64 `hcl:"max_parallel_resource_fetch_limit"`
+	MaxGoroutines                 uint64 `hcl:"max_goroutines"`
+	ResourceTimeout               uint64 `hcl:"resource_timeout"`
+}
+
+var providerBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: "resources",
+		},
+		{
+			Name: "skip_resources",
+		},
+		{
+			Name: "alias",
+		},
+		{
+			Name: "enable_partial_fetch",
+		},
+		{
+			Name: "env",
+		},
+		{
+			Name: "max_parallel_resource_fetch_limit",
+		},
+		{
+			Name: "max_goroutines",
+		},
+		{
+			Name: "resource_timeout",
+		},
+	},
+	Blocks: []hcl.BlockHeaderSchema{
+		// _All_ of these are reserved for future expansion.
+		{Type: "configuration"},
+	},
 }
 
 func decodeProviderBlock(block *hcl.Block, ctx *hcl.EvalContext, existingProviders map[string]bool) (*Provider, hcl.Diagnostics) {
@@ -51,11 +89,24 @@ func decodeProviderBlock(block *hcl.Block, ctx *hcl.EvalContext, existingProvide
 	}
 
 	if attr, exists := content.Attributes["enable_partial_fetch"]; exists {
-		valDiags := gohcl.DecodeExpression(attr.Expr, ctx, &provider.EnablePartialFetch)
+		var boolVar bool
+		valDiags := gohcl.DecodeExpression(attr.Expr, ctx, &boolVar)
 		diags = append(diags, valDiags...)
+		if !valDiags.HasErrors() && !boolVar {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "enable_partial_fetch must be true",
+				Detail:   "non-partial fetch isn't supported, remove the line or set it to true",
+				Subject:  block.DefRange.Ptr(),
+			})
+		}
 	}
 	if attr, exists := content.Attributes["resources"]; exists {
 		valDiags := gohcl.DecodeExpression(attr.Expr, ctx, &provider.Resources)
+		diags = append(diags, valDiags...)
+	}
+	if attr, exists := content.Attributes["skip_resources"]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, ctx, &provider.SkipResources)
 		diags = append(diags, valDiags...)
 	}
 	if attr, exists := content.Attributes["env"]; exists {
@@ -63,19 +114,31 @@ func decodeProviderBlock(block *hcl.Block, ctx *hcl.EvalContext, existingProvide
 		diags = append(diags, valDiags...)
 	}
 
+	if attr, exists := content.Attributes["max_parallel_resource_fetch_limit"]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, ctx, &provider.MaxParallelResourceFetchLimit)
+		diags = append(diags, valDiags...)
+	}
+	if attr, exists := content.Attributes["max_goroutines"]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, ctx, &provider.MaxGoroutines)
+		diags = append(diags, valDiags...)
+	}
+	if attr, exists := content.Attributes["resource_timeout"]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, ctx, &provider.ResourceTimeout)
+		diags = append(diags, valDiags...)
+	}
+
 	for _, block := range content.Blocks {
 		switch block.Type {
 		case "configuration":
-			if b, err := convert.Body(block.Body, convert.Options{Variables: ctx.Variables, Simplify: true}); err == nil {
-				provider.Configuration = b
-			} else {
-				diags = append(diags, &hcl.Diagnostic{
-					Severity: hcl.DiagError,
-					Summary:  "Failed to encode provider configuration",
-					Detail:   err.Error(),
-					Subject:  block.DefRange.Ptr(),
-				})
+			// this should always be hclsyntax.Body
+			body := block.Body.(*hclsyntax.Body)
+			f := hclwrite.NewEmptyFile()
+
+			valDiags := convert.WriteBody(ctx, body, f.Body())
+			if valDiags != nil {
+				diags = append(diags, valDiags...)
 			}
+			provider.Configuration = f.Bytes()
 		default:
 			diags = append(diags, &hcl.Diagnostic{
 				Severity: hcl.DiagError,
@@ -86,25 +149,4 @@ func decodeProviderBlock(block *hcl.Block, ctx *hcl.EvalContext, existingProvide
 		}
 	}
 	return provider, diags
-}
-
-var providerBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name: "resources",
-		},
-		{
-			Name: "alias",
-		},
-		{
-			Name: "enable_partial_fetch",
-		},
-		{
-			Name: "env",
-		},
-	},
-	Blocks: []hcl.BlockHeaderSchema{
-		// _All_ of these are reserved for future expansion.
-		{Type: "configuration"},
-	},
 }

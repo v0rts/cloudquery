@@ -2,13 +2,12 @@ package policy
 
 import (
 	"fmt"
-
-	"github.com/cloudquery/cloudquery/pkg/config"
-
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
+	"strings"
 
 	"github.com/cloudquery/cloudquery/pkg/config/convert"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
 
 var policyWrapperSchema = &hcl.BodySchema{
@@ -20,36 +19,19 @@ var policyWrapperSchema = &hcl.BodySchema{
 	},
 }
 
-func DecodePolicies(body hcl.Body, diags hcl.Diagnostics, basePath string) (Policies, hcl.Diagnostics) {
-	policies := Policies{}
-	content, contentDiags := body.Content(policyWrapperSchema)
-	diags = append(diags, contentDiags...)
-
-	for _, block := range content.Blocks {
-		switch block.Type {
-		case "policy":
-			policy, policyDiags := decodePolicyBlock(block, convert.GetEvalContext(basePath))
-			diags = append(diags, policyDiags...)
-			if policy != nil {
-				policies = append(policies, policy)
-			}
-		default:
-			panic("unexpected block")
-		}
-	}
-	if diags.HasErrors() {
-		return nil, diags
-	}
-	return policies, diags
-}
-
 var policySchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name: "description",
+			Name: "title",
 		},
 		{
 			Name: "source",
+		},
+		{
+			Name: "doc",
+		},
+		{
+			Name: "identifiers",
 		},
 	},
 	Blocks: []hcl.BlockHeaderSchema{
@@ -61,7 +43,7 @@ var policySchema = &hcl.BodySchema{
 			LabelNames: []string{"name"},
 		},
 		{
-			Type:       "query",
+			Type:       "check",
 			LabelNames: []string{"name"},
 		},
 		{
@@ -71,12 +53,71 @@ var policySchema = &hcl.BodySchema{
 	},
 }
 
+func decodePolicy(body hcl.Body, basePath string) (*Policy, hcl.Diagnostics) {
+	content, diags := body.Content(policyWrapperSchema)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+	if len(content.Blocks) > 1 {
+		return nil, diags.Append(&hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  `Only single root policy block allowed`,
+			Detail:   `Only a single policy block is allowed in root level policy`,
+			Subject:  &content.MissingItemRange,
+		})
+	}
+
+	for _, block := range content.Blocks {
+		switch block.Type {
+		case "policy":
+			p, moreDiags := DecodePolicyBlock(block, convert.GetEvalContext(basePath))
+			return p, diags.Extend(moreDiags)
+		default:
+			panic("unexpected block")
+		}
+	}
+	return nil, diags.Append(&hcl.Diagnostic{
+		Severity: hcl.DiagError,
+		Summary:  `No policy root found`,
+		Detail:   `policy root block required in policy file`,
+		Subject:  &content.MissingItemRange,
+	})
+}
+
+func DecodePolicyBlock(b *hcl.Block, ctx *hcl.EvalContext) (*Policy, hcl.Diagnostics) {
+	content, diags := b.Body.Content(policySchema)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	// check if there is a slash within policy name
+	if strings.Contains(b.Labels[0], "/") {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Slash character in policy label",
+			Detail:   "Policy label (name) should not contain forward slashes",
+			Subject:  &b.LabelRanges[0],
+		})
+	}
+
+	p, next := decodePolicyContent(b.Labels, content, ctx, b.TypeRange.Ptr())
+	return p, append(diags, next...)
+}
+
 func decodePolicyContent(labels []string, content *hcl.BodyContent, ctx *hcl.EvalContext, r *hcl.Range) (*Policy, hcl.Diagnostics) {
 	var diags hcl.Diagnostics
-	policy := &Policy{Name: labels[0]}
-	if descriptionAttr, ok := content.Attributes["description"]; ok {
-		diags = append(diags, gohcl.DecodeExpression(descriptionAttr.Expr, ctx, &policy.Description)...)
+	p := &Policy{Name: labels[0]}
+	if descriptionAttr, ok := content.Attributes["title"]; ok {
+		diags = append(diags, gohcl.DecodeExpression(descriptionAttr.Expr, ctx, &p.Title)...)
 	}
+	if descriptionAttr, ok := content.Attributes["doc"]; ok {
+		diags = append(diags, gohcl.DecodeExpression(descriptionAttr.Expr, ctx, &p.Doc)...)
+	}
+
+	if descriptionAttr, ok := content.Attributes["identifiers"]; ok {
+		diags = append(diags, gohcl.DecodeExpression(descriptionAttr.Expr, ctx, &p.Identifiers)...)
+	}
+
 	if sourceAttr, ok := content.Attributes["source"]; ok {
 		// Sanity check
 		if len(content.Blocks) > 0 {
@@ -87,14 +128,24 @@ func decodePolicyContent(labels []string, content *hcl.BodyContent, ctx *hcl.Eva
 				Subject:  r,
 			})
 		}
+		if _, ok := sourceAttr.Expr.(*hclsyntax.FunctionCallExpr); !ok {
+			// set source to policy config, it will be loaded later
+			if err := gohcl.DecodeExpression(sourceAttr.Expr, ctx, &p.Source); err != nil {
+				return nil, err
+			}
+			return p, nil
+		}
 
 		var data string
-		diags = append(diags, gohcl.DecodeExpression(sourceAttr.Expr, ctx, &data)...)
-		body, dd := config.NewParser().LoadFromSource("", []byte(data), config.SourceHCL)
+		if err := gohcl.DecodeExpression(sourceAttr.Expr, ctx, &data); err != nil {
+			return nil, err
+		}
+
+		f, dd := hclsyntax.ParseConfig([]byte(data), p.Name, hcl.Pos{Byte: 0, Line: 1, Column: 1})
 		if dd.HasErrors() {
 			return nil, dd
 		}
-		innerContent, contentDiags := body.Content(policySchema)
+		innerContent, contentDiags := f.Body.Content(policySchema)
 		diags = append(diags, contentDiags...)
 		if contentDiags.HasErrors() {
 			return nil, diags
@@ -113,9 +164,9 @@ func decodePolicyContent(labels []string, content *hcl.BodyContent, ctx *hcl.Eva
 			})
 			return nil, diags
 		}
-		policy.Views = append(policy.Views, iPolicy.Policies[0].Views...)
-		policy.Queries = append(policy.Queries, iPolicy.Policies[0].Queries...)
-		policy.Policies = append(policy.Policies, iPolicy.Policies[0].Policies...)
+		innerPolicy := iPolicy.Policies[0]
+		innerPolicy.Name = p.Name
+		return innerPolicy, nil
 	}
 
 	for _, block := range content.Blocks {
@@ -123,7 +174,7 @@ func decodePolicyContent(labels []string, content *hcl.BodyContent, ctx *hcl.Eva
 		case "configuration":
 			var cfg Configuration
 			diags = append(diags, gohcl.DecodeBody(block.Body, ctx, &cfg)...)
-			if policy.Config != nil {
+			if p.Config != nil {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  `Duplicate block`,
@@ -131,13 +182,29 @@ func decodePolicyContent(labels []string, content *hcl.BodyContent, ctx *hcl.Eva
 					Subject:  &block.DefRange,
 				})
 			}
-			policy.Config = &cfg
+			p.Config = &cfg
 		case "policy":
-			inner, innerDiags := decodePolicyBlock(block, ctx)
+			inner, innerDiags := DecodePolicyBlock(block, ctx)
 			diags = append(diags, innerDiags...)
-			policy.Policies = append(policy.Policies, inner)
-		case "query":
-			var query Query
+			if diags.HasErrors() {
+				return nil, diags
+			}
+			if len(inner.Identifiers) == 0 {
+				inner.Identifiers = p.Identifiers
+			}
+			p.Policies = append(p.Policies, inner)
+		case "check":
+			// check if there is a slash within check name
+			if strings.Contains(block.Labels[0], "/") {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Slash character in check label",
+					Detail:   "Check label (name) should not contain forward slashes",
+					Subject:  &block.LabelRanges[0],
+				})
+			}
+
+			var query Check
 			query.Name = block.Labels[0]
 			diags = append(diags, gohcl.DecodeBody(block.Body, ctx, &query)...)
 			if query.Type == "" {
@@ -149,28 +216,17 @@ func decodePolicyContent(labels []string, content *hcl.BodyContent, ctx *hcl.Eva
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  `Invalid query type`,
-					Detail:   fmt.Sprintf(`Query type value of "%s" is not valid`, query.Type),
+					Detail:   fmt.Sprintf(`Check type value of "%s" is not valid`, query.Type),
 					Subject:  &block.DefRange,
 				})
 			}
-			policy.Queries = append(policy.Queries, &query)
+			p.Checks = append(p.Checks, &query)
 		case "view":
 			var view View
 			view.Name = block.Labels[0]
 			diags = append(diags, gohcl.DecodeBody(block.Body, ctx, &view)...)
-			policy.Views = append(policy.Views, &view)
+			p.Views = append(p.Views, &view)
 		}
 	}
-	if diags.HasErrors() {
-		return nil, diags
-	}
-	return policy, diags
-}
-
-func decodePolicyBlock(b *hcl.Block, ctx *hcl.EvalContext) (*Policy, hcl.Diagnostics) {
-	content, diags := b.Body.Content(policySchema)
-	if diags.HasErrors() {
-		return nil, diags
-	}
-	return decodePolicyContent(b.Labels, content, ctx, b.TypeRange.Ptr())
+	return p, diags
 }

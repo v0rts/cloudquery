@@ -19,3 +19,11 @@ cloud_sql_proxy
 config.hcl
 /.cq/
 config_old.hcl
+/pkg/policy/tests/output/
+/pkg/policy/cq/*
+/pkg/ui/console/.cq/*
+database-data/*
+dest/*
+outfile
+test_init_config.hcl
+telemetry-random-id

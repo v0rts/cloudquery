@@ -3,11 +3,18 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/cloudquery/cloudquery/pkg/config"
+	"github.com/cloudquery/cloudquery/pkg/core"
+	"github.com/cloudquery/cloudquery/pkg/module"
+	"github.com/cloudquery/cloudquery/pkg/module/drift"
+	"github.com/cloudquery/cloudquery/pkg/plugin/registry"
 	"github.com/cloudquery/cloudquery/pkg/ui"
 	"github.com/cloudquery/cloudquery/pkg/ui/console"
+	"github.com/cloudquery/cq-provider-sdk/provider/diag"
+	"github.com/google/uuid"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
@@ -20,7 +27,7 @@ const initHelpMsg = "Generate initial config.hcl for fetch command"
 
 var (
 	initCmd = &cobra.Command{
-		Use:   "init [choose one or more providers (aws,gcp,azure,okta,...)]",
+		Use:   "init [choose one or more providers (aws gcp azure okta ...)]",
 		Short: initHelpMsg,
 		Long:  initHelpMsg,
 		Example: `
@@ -43,26 +50,51 @@ func Initialize(ctx context.Context, providers []string) error {
 
 	if info, _ := fs.Stat(configPath); info != nil {
 		ui.ColorizedOutput(ui.ColorError, "Error: Config file %s already exists\n", configPath)
-		return &console.ExitCodeError{ExitCode: 1}
+		return diag.FromError(fmt.Errorf("config file %q already exists", configPath), diag.USER)
 	}
 	f := hclwrite.NewEmptyFile()
 	rootBody := f.Body()
 	requiredProviders := make([]*config.RequiredProvider, len(providers))
 	for i, p := range providers {
-		requiredProviders[i] = &config.RequiredProvider{
-			Name:    p,
-			Version: "latest",
+		organization, providerName, provVersion, err := registry.ParseProviderNameWithVersion(p)
+		if err != nil {
+			return fmt.Errorf("could not parse requested provider: %w", err)
 		}
+		rp := config.RequiredProvider{
+			Name:    providerName,
+			Version: provVersion,
+		}
+		if organization != registry.DefaultOrganization {
+			source := fmt.Sprintf("%s/%s", organization, providerName)
+			rp.Source = &source
+		}
+		requiredProviders[i] = &rp
+		providers[i] = providerName // overwrite "provider@version" with just "provider"
 	}
 	// TODO: build this manually with block and add comments as well
 	cqBlock := gohcl.EncodeAsBlock(&config.CloudQuery{
-		PluginDirectory: "./cq/providers",
-		PolicyDirectory: "./cq/policies",
-		Providers:       requiredProviders,
+		Providers: requiredProviders,
 		Connection: &config.Connection{
-			DSN: "host=localhost user=postgres password=pass database=postgres port=5432 sslmode=disable",
+			Username: "postgres",
+			Password: "pass",
+			Host:     "localhost",
+			Port:     5432,
+			Database: "postgres",
+			SSLMode:  "disable",
 		},
 	}, "cloudquery")
+
+	// Remove deprecated "plugin_directory" and "policy_directory"
+	cqBlock.Body().RemoveAttribute("plugin_directory")
+	cqBlock.Body().RemoveAttribute("policy_directory")
+
+	// Update connection block to remove unwanted keys
+	if b := cqBlock.Body().FirstMatchingBlock("connection", nil); b != nil {
+		bd := b.Body()
+		bd.RemoveAttribute("dsn")
+		bd.RemoveAttribute("type")
+		bd.RemoveAttribute("extras")
+	}
 
 	rootBody.AppendBlock(cqBlock)
 	cfg, diags := config.NewParser(
@@ -72,11 +104,12 @@ func Initialize(ctx context.Context, providers []string) error {
 		return diags
 	}
 
-	c, err := console.CreateClientFromConfig(ctx, cfg)
+	cfg.CloudQuery.Connection.DSN = "" // Don't connect
+	c, err := console.CreateClientFromConfig(ctx, cfg, uuid.Nil)
 	if err != nil {
 		return err
 	}
-	defer c.Client().Close()
+	defer c.Close()
 	if err := c.DownloadProviders(ctx); err != nil {
 		return err
 	}
@@ -94,15 +127,19 @@ func Initialize(ctx context.Context, providers []string) error {
 		return err
 	}
 	for _, p := range providers {
-		pCfg, err := c.Client().GetProviderConfiguration(ctx, p)
-		if err != nil {
-			return err
+		pCfg, diags := core.GetProviderConfiguration(ctx, c.PluginManager, &core.GetProviderConfigOptions{
+			Provider: c.ConvertRequiredToRegistry(p),
+		})
+
+		if diags.HasErrors() {
+			return diags
 		}
 		buffer.Write(pCfg.Config)
 		buffer.WriteString("\n")
 	}
-
-	if mex := c.Client().ModuleManager.ExampleConfigs(); len(mex) > 0 {
+	mm := module.NewManager(nil, nil)
+	mm.Register(drift.New())
+	if mex := mm.ExampleConfigs(providers); len(mex) > 0 {
 		buffer.WriteString("\n// Module Configurations\nmodules {\n")
 		for _, c := range mex {
 			buffer.WriteString(c)

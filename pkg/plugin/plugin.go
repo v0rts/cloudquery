@@ -4,15 +4,38 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/cloudquery/cloudquery/internal/logging"
 	"github.com/cloudquery/cloudquery/pkg/plugin/registry"
 	"github.com/cloudquery/cq-provider-sdk/cqproto"
 	"github.com/cloudquery/cq-provider-sdk/serve"
-
 	"github.com/hashicorp/go-plugin"
 	zerolog "github.com/rs/zerolog/log"
 )
+
+type Plugin interface {
+	Name() string
+	Version() string
+	ProtocolVersion() int
+	Provider() cqproto.CQProvider
+	Close()
+}
+
+type unmanagedPlugin struct {
+	name     string
+	config   *plugin.ReattachConfig
+	client   *plugin.Client
+	provider cqproto.CQProvider
+}
+type managedPlugin struct {
+	name     string
+	version  string
+	client   *plugin.Client
+	provider cqproto.CQProvider
+}
+
+type Plugins map[string]Plugin
 
 const (
 	Unmanaged = "unmanaged"
@@ -23,29 +46,33 @@ var pluginMap = map[string]plugin.Plugin{
 	"provider": &cqproto.CQPlugin{},
 }
 
-type Plugin interface {
-	Name() string
-	Version() string
-	Provider() cqproto.CQProvider
-	Close()
-}
+// Get returns a Plugin instance from a registry.Provider creation info or it's created alias
+func (pm Plugins) Get(p registry.Provider, alias string) Plugin {
+	for k, v := range pm {
+		if v.Version() == Unmanaged && k == p.Name {
+			return v
+		}
 
-type managedPlugin struct {
-	name     string
-	version  string
-	client   *plugin.Client
-	provider cqproto.CQProvider
+		if alias == "" && (k == p.String() || v.Name() == fmt.Sprintf("%s_%s", p.Name, p.Name)) {
+			return v
+		}
+		if v.Name() == fmt.Sprintf("%s_%s", p, alias) {
+			return v
+		}
+	}
+	return nil
 }
 
 // NewRemotePlugin creates a new remoted plugin using go_plugin
-func newRemotePlugin(details *registry.ProviderDetails, alias string, env []string) (*managedPlugin, error) {
+func newRemotePlugin(details *registry.ProviderBinary, alias string, env []string) (*managedPlugin, error) {
 	cmd := exec.Command(details.FilePath)
 	cmd.Env = append(cmd.Env, env...)
 
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: serve.Handshake,
 		VersionedPlugins: map[int]plugin.PluginSet{
-			2: pluginMap,
+			cqproto.V4: pluginMap,
+			cqproto.V5: pluginMap,
 		},
 		Managed:          true,
 		Cmd:              cmd,
@@ -55,6 +82,10 @@ func newRemotePlugin(details *registry.ProviderDetails, alias string, env []stri
 	rpcClient, err := client.Client()
 	if err != nil {
 		client.Kill()
+		// give a more clear message to the user
+		if strings.Contains(err.Error(), "Incompatible API version") {
+			return nil, fmt.Errorf("%w. Please upgrade to a latest version of this provider", err)
+		}
 		return nil, err
 	}
 	raw, err := rpcClient.Dispense("provider")
@@ -84,6 +115,8 @@ func (m managedPlugin) Name() string { return m.name }
 
 func (m managedPlugin) Version() string { return m.version }
 
+func (m managedPlugin) ProtocolVersion() int { return m.client.NegotiatedVersion() }
+
 func (m managedPlugin) Provider() cqproto.CQProvider { return m.provider }
 
 func (m managedPlugin) Close() {
@@ -91,13 +124,6 @@ func (m managedPlugin) Close() {
 		return
 	}
 	m.client.Kill()
-}
-
-type unmanagedPlugin struct {
-	name     string
-	config   *plugin.ReattachConfig
-	client   *plugin.Client
-	provider cqproto.CQProvider
 }
 
 // newUnmanagedPlugin attaches to and existing running plugin  a new unmanaged plugin using go_plugin
@@ -134,8 +160,10 @@ func newUnmanagedPlugin(providerName string, config *plugin.ReattachConfig) (*un
 
 func (m unmanagedPlugin) Name() string { return m.name }
 
-func (m unmanagedPlugin) Version() string { return Unmanaged }
+func (unmanagedPlugin) Version() string { return Unmanaged }
+
+func (unmanagedPlugin) ProtocolVersion() int { return cqproto.Vunmanaged }
 
 func (m unmanagedPlugin) Provider() cqproto.CQProvider { return m.provider }
 
-func (m unmanagedPlugin) Close() {}
+func (unmanagedPlugin) Close() {}

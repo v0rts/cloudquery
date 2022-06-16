@@ -7,10 +7,9 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/cloudquery/cloudquery/pkg/core"
 	"github.com/cloudquery/cq-provider-sdk/cqproto"
 	"github.com/cloudquery/cq-provider-sdk/provider/schema"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -332,7 +331,7 @@ func TestInterpolatedResourceMap(t *testing.T) {
 		},
 	}
 
-	ret := prov.interpolatedResourceMap(iacTerraform, hclog.NewNullLogger())
+	ret := prov.interpolatedResourceMap(iacTerraform)
 
 	assert.EqualValues(t, map[string]*ResourceConfig{
 		"test": {
@@ -357,8 +356,7 @@ func copyMap(in, out interface{}) {
 
 func TestApplyProvider(t *testing.T) {
 	prov := ProviderConfig{
-		Name:    "aws",
-		Version: ">=1.5.0",
+		Name: "aws",
 		Resources: map[string]*ResourceConfig{
 			"test1": {
 				IAC: map[iacProvider]*IACConfig{
@@ -376,9 +374,6 @@ func TestApplyProvider(t *testing.T) {
 			},
 		},
 	}
-	var err error
-	prov.versionConstraints, err = version.NewConstraint(prov.Version)
-	assert.NoError(t, err)
 
 	modify := func(p ProviderConfig, fn func(*ProviderConfig)) ProviderConfig {
 		var resCopy map[string]*ResourceConfig
@@ -388,9 +383,7 @@ func TestApplyProvider(t *testing.T) {
 		return p
 	}
 
-	d := &Drift{
-		logger: hclog.NewNullLogger(),
-	}
+	d := &Drift{}
 
 	table := []struct {
 		name              string
@@ -414,17 +407,7 @@ func TestApplyProvider(t *testing.T) {
 			expectedError:  false,
 		},
 		{
-			name: "Old version",
-			cfg:  prov,
-			schema: &cqproto.GetProviderSchemaResponse{
-				Name:    "aws",
-				Version: "1.0.0",
-			},
-			expectedResult: false,
-			expectedError:  false,
-		},
-		{
-			name: "New version",
+			name: "Matching name",
 			cfg:  prov,
 			schema: &cqproto.GetProviderSchemaResponse{
 				Name:    "aws",
@@ -496,6 +479,47 @@ func TestApplyProvider(t *testing.T) {
 			expectedResources: []string{"test2"},
 		},
 		{
+			name: "Allow some resources with hash",
+			cfg: modify(prov, func(p *ProviderConfig) {
+				p.Resources["test3#hash1"] = &ResourceConfig{
+					IAC: map[iacProvider]*IACConfig{
+						iacTerraform: {
+							Type: "tf_test3a",
+						},
+					},
+				}
+				p.Resources["test3#hash2"] = &ResourceConfig{
+					IAC: map[iacProvider]*IACConfig{
+						iacTerraform: {
+							Type: "tf_test3b",
+						},
+					},
+				}
+				p.CheckResources = ResourceSelectors{
+					{
+						Type: "test3",
+						ID:   aws.String("*"),
+					},
+				}
+			}),
+			schema: &cqproto.GetProviderSchemaResponse{
+				Name:    "aws",
+				Version: "1.6.0",
+				ResourceTables: map[string]*schema.Table{
+					"test1": {
+						Name: "aws_test1",
+					},
+					"test3": {
+						Name: "aws_test3",
+					},
+				},
+			},
+			expectedResult:    true,
+			expectedError:     false,
+			checkResourceList: true,
+			expectedResources: []string{"test3#hash1", "test3#hash2"},
+		},
+		{
 			name: "Tag filter (all resources)",
 			cfg: modify(prov, func(p *ProviderConfig) {
 				tags := map[string]string{"key": "value"}
@@ -528,7 +552,9 @@ func TestApplyProvider(t *testing.T) {
 	for i := range table {
 		t.Run(table[i].name, func(t *testing.T) {
 			p := table[i].cfg
-			res, diags := d.applyProvider(&p, table[i].schema)
+
+			d.tableMap = nil // reinit every time
+			res, diags := d.applyProvider(&p, &core.ProviderSchema{GetProviderSchemaResponse: table[i].schema})
 			assert.Equal(t, table[i].expectedError, diags.HasErrors(), "diags: %s", diags.Error())
 			assert.Equal(t, table[i].expectedResult, res, "unexpected result")
 			if table[i].checkResourceList {
@@ -541,8 +567,7 @@ func TestApplyProvider(t *testing.T) {
 
 func TestSubResourceLookup(t *testing.T) {
 	prov := ProviderConfig{
-		Name:    "aws",
-		Version: ">=1.5.0",
+		Name: "aws",
 		Resources: map[string]*ResourceConfig{
 			"test1": {
 				IAC: map[iacProvider]*IACConfig{
@@ -577,13 +602,8 @@ func TestSubResourceLookup(t *testing.T) {
 			},
 		},
 	}
-	var err error
-	prov.versionConstraints, err = version.NewConstraint(prov.Version)
-	assert.NoError(t, err)
 
-	d := &Drift{
-		logger: hclog.NewNullLogger(),
-	}
+	d := &Drift{}
 
 	sch := &cqproto.GetProviderSchemaResponse{
 		Name:    "aws",
@@ -646,18 +666,18 @@ func TestSubResourceLookup(t *testing.T) {
 		},
 	}
 
-	res, diags := d.applyProvider(&prov, sch)
+	res, diags := d.applyProvider(&prov, &core.ProviderSchema{GetProviderSchemaResponse: sch})
 	assert.False(t, diags.HasErrors(), "diags: %s", diags.Error())
 	assert.True(t, res, "unexpected result")
 
 	assert.Equal(t, []string{"aws_test1_2", "aws_test1_3", "test1", "test2"}, prov.resourceKeys())
 
-	ret := prov.interpolatedResourceMap(iacTerraform, d.logger)
+	ret := prov.interpolatedResourceMap(iacTerraform)
 
 	assert.Equal(t, []string{"data1"}, ret["aws_test1_2"].Identifiers)
 	assert.Equal(t, []string{"data1", "data2"}, ret["aws_test1_2"].Attributes)
 
-	tbl := d.lookupResource("aws_test1_2", sch)
+	tbl := d.lookupResource("aws_test1_2", &core.ProviderSchema{GetProviderSchemaResponse: sch})
 	assert.NotNil(t, tbl)
 	assert.Equal(t, []string{"data1", "data2", "data3_ignored"}, tbl.NonCQColumns())
 	assert.Equal(t, []string{"data1"}, tbl.NonCQPrimaryKeys())
