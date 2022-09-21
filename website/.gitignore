@@ -1,0 +1,9 @@
+.next
+node_modules
+.env
+
+# Plugins pages are auto generated during build
+pages/plugins/**/*
+public/robots.txt
+public/sitemap.xml
+public/sitemap-0.xml
