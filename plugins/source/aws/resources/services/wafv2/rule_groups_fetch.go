@@ -14,27 +14,16 @@ import (
 
 func fetchWafv2RuleGroups(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
-	service := c.Services().WafV2
+	svc := c.Services().Wafv2
 
 	config := wafv2.ListRuleGroupsInput{Scope: c.WAFScope}
 	for {
-		output, err := service.ListRuleGroups(ctx, &config)
+		output, err := svc.ListRuleGroups(ctx, &config)
 		if err != nil {
 			return err
 		}
 
-		// Get RuleGroup object
-		for _, ruleGroupOutput := range output.RuleGroups {
-			ruleGroup, err := service.GetRuleGroup(ctx, &wafv2.GetRuleGroupInput{
-				Name:  ruleGroupOutput.Name,
-				Id:    ruleGroupOutput.Id,
-				Scope: c.WAFScope,
-			})
-			if err != nil {
-				return err
-			}
-			res <- ruleGroup.RuleGroup
-		}
+		res <- output.RuleGroups
 
 		if aws.ToString(output.NextMarker) == "" {
 			break
@@ -43,11 +32,31 @@ func fetchWafv2RuleGroups(ctx context.Context, meta schema.ClientMeta, parent *s
 	}
 	return nil
 }
+
+func getRuleGroup(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Wafv2
+	ruleGroupOutput := resource.Item.(types.RuleGroupSummary)
+
+	// Get RuleGroup object
+	ruleGroup, err := svc.GetRuleGroup(ctx, &wafv2.GetRuleGroupInput{
+		Name:  ruleGroupOutput.Name,
+		Id:    ruleGroupOutput.Id,
+		Scope: c.WAFScope,
+	})
+	if err != nil {
+		return err
+	}
+
+	resource.Item = ruleGroup.RuleGroup
+	return nil
+}
+
 func resolveRuleGroupTags(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
 	ruleGroup := resource.Item.(*types.RuleGroup)
 
 	cl := meta.(*client.Client)
-	service := cl.Services().WafV2
+	service := cl.Services().Wafv2
 
 	// Resolve tags
 	outputTags := make(map[string]*string)
@@ -71,7 +80,7 @@ func resolveWafv2ruleGroupPolicy(ctx context.Context, meta schema.ClientMeta, re
 	ruleGroup := resource.Item.(*types.RuleGroup)
 
 	cl := meta.(*client.Client)
-	service := cl.Services().WafV2
+	service := cl.Services().Wafv2
 
 	// Resolve rule group policy
 	policy, err := service.GetPermissionPolicy(ctx, &wafv2.GetPermissionPolicyInput{ResourceArn: ruleGroup.ARN}, func(options *wafv2.Options) {

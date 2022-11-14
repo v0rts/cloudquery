@@ -3,27 +3,32 @@ package kms
 import (
 	"context"
 
+	"cloud.google.com/go/kms/apiv1/kmspb"
 	"github.com/cloudquery/plugin-sdk/schema"
 	"github.com/cloudquery/plugins/source/gcp/client"
 	"github.com/pkg/errors"
 	"google.golang.org/api/iterator"
-	pb "google.golang.org/genproto/googleapis/cloud/kms/v1"
 )
 
 func fetchCryptoKeys(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
-	it := c.Services.KmsKeyManagementClient.ListCryptoKeys(ctx, &pb.ListCryptoKeysRequest{
-		Parent: parent.Data["name"].(string),
-	})
+	p := parent.Item.(*kmspb.KeyRing)
+
+	it := c.Services.KmsKeyManagementClient.ListCryptoKeys(ctx, &kmspb.ListCryptoKeysRequest{Parent: p.Name})
 	for {
-		resp, err := it.Next()
-		if err == iterator.Done {
-			break
+		key, err := it.Next()
+		if key != nil {
+			res <- key
 		}
 		if err != nil {
+			if errors.Is(err, iterator.Done) {
+				return nil
+			}
 			return errors.WithStack(err)
 		}
-		res <- resp
 	}
-	return nil
+}
+
+func resolveRotationPeriod(_ context.Context, _ schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
+	return resource.Set(c.Name, resource.Item.(*kmspb.CryptoKey).GetRotationPeriod().AsDuration())
 }

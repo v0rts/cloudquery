@@ -9,9 +9,10 @@ import (
 func CloudformationResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "stacks",
-			Struct:     &types.Stack{},
-			SkipFields: []string{"StackId", "Tags"},
+			SubService:  "stacks",
+			Struct:      &types.Stack{},
+			Description: "https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_Stack.html",
+			SkipFields:  []string{"StackId"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -29,11 +30,6 @@ func CloudformationResources() []*Resource {
 						Resolver: `schema.PathResolver("StackId")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
-					{
-						Name:     "tags",
-						Type:     schema.TypeJSON,
-						Resolver: `client.ResolveTags`,
-					},
 				}...),
 			Relations: []string{
 				"StackResources()",
@@ -42,6 +38,7 @@ func CloudformationResources() []*Resource {
 		{
 			SubService:   "stack_resources",
 			Struct:       &types.StackResourceSummary{},
+			Description:  "https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_StackResourceSummary.html",
 			SkipFields:   []string{},
 			ExtraColumns: defaultRegionalColumns,
 		},

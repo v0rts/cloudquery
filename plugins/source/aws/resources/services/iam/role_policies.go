@@ -9,9 +9,10 @@ import (
 
 func RolePolicies() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_iam_role_policies",
-		Resolver:  fetchIamRolePolicies,
-		Multiplex: client.AccountMultiplex,
+		Name:                "aws_iam_role_policies",
+		Resolver:            fetchIamRolePolicies,
+		PreResourceResolver: getRolePolicy,
+		Multiplex:           client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -21,7 +22,7 @@ func RolePolicies() *schema.Table {
 			{
 				Name:     "role_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "policy_document",

@@ -102,7 +102,7 @@ func GlueResources() []*Resource {
 					{
 						Name:     "database_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
@@ -126,13 +126,13 @@ func GlueResources() []*Resource {
 					{
 						Name:     "database_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("database_arn")`,
+						Resolver: `schema.ParentColumnResolver("database_arn")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
 						Name:     "database_table_name",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("name")`,
+						Resolver: `schema.ParentColumnResolver("name")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
@@ -214,7 +214,7 @@ func GlueResources() []*Resource {
 					{
 						Name:     "job_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
@@ -256,7 +256,7 @@ func GlueResources() []*Resource {
 					{
 						Name:     "ml_transform_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
@@ -284,9 +284,10 @@ func GlueResources() []*Resource {
 			},
 		},
 		{
-			SubService: "registry_schemas",
-			Struct:     &glue.GetSchemaOutput{},
-			SkipFields: []string{"SchemaArn"},
+			SubService:          "registry_schemas",
+			Struct:              &glue.GetSchemaOutput{},
+			SkipFields:          []string{"SchemaArn"},
+			PreResourceResolver: "getRegistrySchema",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -306,16 +307,17 @@ func GlueResources() []*Resource {
 			},
 		},
 		{
-			SubService: "registry_schema_versions",
-			Struct:     &glue.GetSchemaVersionOutput{},
-			SkipFields: []string{},
+			SubService:          "registry_schema_versions",
+			Struct:              &glue.GetSchemaVersionOutput{},
+			SkipFields:          []string{},
+			PreResourceResolver: "getRegistrySchemaVersion",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "registry_schema_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "metadata",
@@ -349,9 +351,10 @@ func GlueResources() []*Resource {
 			},
 		},
 		{
-			SubService: "triggers",
-			Struct:     &types.Trigger{},
-			SkipFields: []string{},
+			SubService:          "triggers",
+			Struct:              &types.Trigger{},
+			SkipFields:          []string{},
+			PreResourceResolver: "getTrigger",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -369,9 +372,10 @@ func GlueResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "workflows",
-			Struct:     &types.Workflow{},
-			SkipFields: []string{},
+			SubService:          "workflows",
+			Struct:              &types.Workflow{},
+			SkipFields:          []string{},
+			PreResourceResolver: "getWorkflow",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{

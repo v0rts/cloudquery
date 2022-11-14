@@ -13,8 +13,9 @@ import (
 
 func diagnosticSettings() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_logic_diagnostic_settings",
-		Resolver: fetchLogicDiagnosticSettings,
+		Name:        "azure_logic_diagnostic_settings",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2019-06-01/insights#DiagnosticSettingsResource`,
+		Resolver:    fetchLogicDiagnosticSettings,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func diagnosticSettings() *schema.Table {
 			},
 			{
 				Name:     "logic_workflow_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "storage_account_id",

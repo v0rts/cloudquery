@@ -9,9 +9,10 @@ import (
 
 func Connections() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_directconnect_connections",
-		Resolver:  fetchDirectconnectConnections,
-		Multiplex: client.ServiceAccountRegionMultiplexer("directconnect"),
+		Name:        "aws_directconnect_connections",
+		Description: `https://docs.aws.amazon.com/directconnect/latest/APIReference/API_Connection.html`,
+		Resolver:    fetchDirectconnectConnections,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("directconnect"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -40,17 +41,12 @@ func Connections() *schema.Table {
 				},
 			},
 			{
-				Name:     "tags",
-				Type:     schema.TypeJSON,
-				Resolver: client.ResolveTags,
-			},
-			{
 				Name:     "aws_device",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("AwsDevice"),
 			},
 			{
-				Name:     "aws_device_v_2",
+				Name:     "aws_device_v2",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("AwsDeviceV2"),
 			},
@@ -133,6 +129,11 @@ func Connections() *schema.Table {
 				Name:     "provider_name",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("ProviderName"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "vlan",

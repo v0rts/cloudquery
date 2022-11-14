@@ -9,9 +9,11 @@ import (
 
 func UserPools() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_cognito_user_pools",
-		Resolver:  fetchCognitoUserPools,
-		Multiplex: client.ServiceAccountRegionMultiplexer("cognito-identity"),
+		Name:                "aws_cognito_user_pools",
+		Description:         `https://docs.aws.amazon.com/cognito-user-identity-pools/latest/APIReference/API_UserPoolType.html`,
+		Resolver:            fetchCognitoUserPools,
+		PreResourceResolver: getUserPool,
+		Multiplex:           client.ServiceAccountRegionMultiplexer("cognito-identity"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -71,6 +73,11 @@ func UserPools() *schema.Table {
 				Name:     "custom_domain",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("CustomDomain"),
+			},
+			{
+				Name:     "deletion_protection",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("DeletionProtection"),
 			},
 			{
 				Name:     "device_configuration",

@@ -14,6 +14,7 @@ import (
 func StoreAccounts() *schema.Table {
 	return &schema.Table{
 		Name:                "azure_datalake_store_accounts",
+		Description:         `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/datalake/store/mgmt/2016-11-01/account#DataLakeStoreAccount`,
 		Resolver:            fetchDataLakeStoreAccounts,
 		PreResourceResolver: getDataLakeStoreAccount,
 		Multiplex:           client.SubscriptionMultiplex,
@@ -87,6 +88,11 @@ func StoreAccounts() *schema.Table {
 				Name:     "current_tier",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("CurrentTier"),
+			},
+			{
+				Name:     "account_id",
+				Type:     schema.TypeUUID,
+				Resolver: schema.PathResolver("AccountID"),
 			},
 			{
 				Name:     "provisioning_state",

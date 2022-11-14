@@ -9,9 +9,10 @@ import (
 
 func ContainerServiceDeployments() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lightsail_container_service_deployments",
-		Resolver:  fetchLightsailContainerServiceDeployments,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lightsail"),
+		Name:        "aws_lightsail_container_service_deployments",
+		Description: `https://docs.aws.amazon.com/lightsail/2016-11-28/api-reference/API_ContainerServiceDeployment.html`,
+		Resolver:    fetchLightsailContainerServiceDeployments,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("lightsail"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func ContainerServiceDeployments() *schema.Table {
 			{
 				Name:     "container_service_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "containers",

@@ -9,9 +9,10 @@ import (
 
 func Vpcs() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ec2_vpcs",
-		Resolver:  fetchEc2Vpcs,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ec2"),
+		Name:        "aws_ec2_vpcs",
+		Description: `https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Vpc.html`,
+		Resolver:    fetchEc2Vpcs,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("ec2"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -52,7 +53,7 @@ func Vpcs() *schema.Table {
 				Resolver: schema.PathResolver("InstanceTenancy"),
 			},
 			{
-				Name:     "ipv_6_cidr_block_association_set",
+				Name:     "ipv6_cidr_block_association_set",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("Ipv6CidrBlockAssociationSet"),
 			},
@@ -74,7 +75,7 @@ func Vpcs() *schema.Table {
 			{
 				Name:     "tags",
 				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("Tags"),
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "vpc_id",

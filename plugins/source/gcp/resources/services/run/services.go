@@ -56,23 +56,23 @@ func Services() *schema.Table {
 			},
 			{
 				Name:     "create_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("CreateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("CreateTime"),
 			},
 			{
 				Name:     "update_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("UpdateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("UpdateTime"),
 			},
 			{
 				Name:     "delete_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("DeleteTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("DeleteTime"),
 			},
 			{
 				Name:     "expire_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("ExpireTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("ExpireTime"),
 			},
 			{
 				Name:     "creator",
@@ -96,13 +96,13 @@ func Services() *schema.Table {
 			},
 			{
 				Name:     "ingress",
-				Type:     schema.TypeInt,
-				Resolver: schema.PathResolver("Ingress"),
+				Type:     schema.TypeString,
+				Resolver: client.ResolveProtoEnum("Ingress"),
 			},
 			{
 				Name:     "launch_stage",
-				Type:     schema.TypeInt,
-				Resolver: schema.PathResolver("LaunchStage"),
+				Type:     schema.TypeString,
+				Resolver: client.ResolveProtoEnum("LaunchStage"),
 			},
 			{
 				Name:     "binary_authorization",

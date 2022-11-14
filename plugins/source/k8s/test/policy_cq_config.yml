@@ -1,16 +1,15 @@
-cloudquery:
-  providers:
-    - name: k8s
-      version: latest
-  connection:
-    type: postgres
-    username: postgres
-    password: pass
-    host: localhost
-    port: 5432
-    database: postgres
-    sslmode: disable
-providers:
-  - name: k8s
-    resources:
-      - "*"
+kind: source
+spec:
+  name: k8s
+  version: v1.0.0
+  destinations: [postgresql]
+  path: ./k8s
+  registry: local
+---
+kind: destination
+spec:
+  name: postgresql
+  path: cloudquery/postgresql
+  version: "v1.7.9" # latest version of postgresql plugin
+  spec:
+    connection_string: ${CQ_DSN}

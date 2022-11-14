@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/mq"
+	"github.com/aws/aws-sdk-go-v2/service/mq/types"
 	xj "github.com/basgys/goxml2json"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -17,21 +18,14 @@ import (
 func fetchMqBrokers(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	var config mq.ListBrokersInput
 	c := meta.(*client.Client)
-	svc := c.Services().MQ
+	svc := c.Services().Mq
 	for {
 		response, err := svc.ListBrokers(ctx, &config)
 		if err != nil {
 			return err
 		}
-		for _, bs := range response.BrokerSummaries {
-			output, err := svc.DescribeBroker(ctx, &mq.DescribeBrokerInput{BrokerId: bs.BrokerId}, func(options *mq.Options) {
-				options.Region = c.Region
-			})
-			if err != nil {
-				return err
-			}
-			res <- output
-		}
+		res <- response.BrokerSummaries
+
 		if aws.ToString(response.NextToken) == "" {
 			break
 		}
@@ -40,10 +34,23 @@ func fetchMqBrokers(ctx context.Context, meta schema.ClientMeta, parent *schema.
 	return nil
 }
 
+func getMqBroker(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Mq
+	bs := resource.Item.(types.BrokerSummary)
+
+	output, err := svc.DescribeBroker(ctx, &mq.DescribeBrokerInput{BrokerId: bs.BrokerId})
+	if err != nil {
+		return err
+	}
+	resource.Item = output
+	return nil
+}
+
 func fetchMqBrokerConfigurations(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	broker := parent.Item.(*mq.DescribeBrokerOutput)
 	c := meta.(*client.Client)
-	svc := c.Services().MQ
+	svc := c.Services().Mq
 	// Ensure Configurations is not nil
 	// This *might* occur during initial creation of broker
 	if broker.Configurations == nil {
@@ -78,10 +85,11 @@ func fetchMqBrokerConfigurations(ctx context.Context, meta schema.ClientMeta, pa
 	res <- configurations
 	return nil
 }
+
 func fetchMqBrokerConfigurationRevisions(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	cfg := parent.Item.(mq.DescribeConfigurationOutput)
 	c := meta.(*client.Client)
-	svc := c.Services().MQ
+	svc := c.Services().Mq
 
 	input := mq.ListConfigurationRevisionsInput{ConfigurationId: cfg.Id}
 	for {
@@ -89,21 +97,28 @@ func fetchMqBrokerConfigurationRevisions(ctx context.Context, meta schema.Client
 		if err != nil {
 			return err
 		}
-		for _, rev := range output.Revisions {
-			revId := strconv.Itoa(int(rev.Revision))
-			output, err := svc.DescribeConfigurationRevision(ctx, &mq.DescribeConfigurationRevisionInput{ConfigurationId: cfg.Id, ConfigurationRevision: &revId}, func(options *mq.Options) {
-				options.Region = c.Region
-			})
-			if err != nil {
-				return err
-			}
-			res <- output
-		}
+		res <- output.Revisions
+
 		if aws.ToString(output.NextToken) == "" {
 			break
 		}
 		input.NextToken = output.NextToken
 	}
+	return nil
+}
+
+func getMqBrokerConfigurationRevision(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Mq
+	rev := resource.Item.(types.ConfigurationRevision)
+	cfg := resource.Parent.Item.(mq.DescribeConfigurationOutput)
+
+	revId := strconv.Itoa(int(rev.Revision))
+	output, err := svc.DescribeConfigurationRevision(ctx, &mq.DescribeConfigurationRevisionInput{ConfigurationId: cfg.Id, ConfigurationRevision: &revId})
+	if err != nil {
+		return err
+	}
+	resource.Item = output
 	return nil
 }
 
@@ -129,7 +144,7 @@ func resolveBrokerConfigurationRevisionsData(ctx context.Context, meta schema.Cl
 func fetchMqBrokerUsers(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	broker := parent.Item.(*mq.DescribeBrokerOutput)
 	c := meta.(*client.Client)
-	svc := c.Services().MQ
+	svc := c.Services().Mq
 	for _, us := range broker.Users {
 		input := mq.DescribeUserInput{
 			BrokerId: broker.BrokerId,

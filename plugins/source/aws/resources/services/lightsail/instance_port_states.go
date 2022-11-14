@@ -9,9 +9,10 @@ import (
 
 func InstancePortStates() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lightsail_instance_port_states",
-		Resolver:  fetchLightsailInstancePortStates,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lightsail"),
+		Name:        "aws_lightsail_instance_port_states",
+		Description: `https://docs.aws.amazon.com/lightsail/2016-11-28/api-reference/API_InstancePortState.html`,
+		Resolver:    fetchLightsailInstancePortStates,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("lightsail"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func InstancePortStates() *schema.Table {
 			{
 				Name:     "instance_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "cidr_list_aliases",
@@ -44,7 +45,7 @@ func InstancePortStates() *schema.Table {
 				Resolver: schema.PathResolver("FromPort"),
 			},
 			{
-				Name:     "ipv_6_cidrs",
+				Name:     "ipv6_cidrs",
 				Type:     schema.TypeStringArray,
 				Resolver: schema.PathResolver("Ipv6Cidrs"),
 			},

@@ -12,7 +12,7 @@ import (
 
 func fetchDynamodbTables(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
-	svc := c.Services().DynamoDB
+	svc := c.Services().Dynamodb
 
 	config := dynamodb.ListTablesInput{}
 	for {
@@ -20,17 +20,7 @@ func fetchDynamodbTables(ctx context.Context, meta schema.ClientMeta, parent *sc
 		if err != nil {
 			return err
 		}
-
-		for i := range output.TableNames {
-			response, err := svc.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &output.TableNames[i]})
-			if err != nil {
-				if c.IsNotFoundError(err) {
-					continue
-				}
-				return err
-			}
-			res <- response.Table
-		}
+		res <- output.TableNames
 
 		if aws.ToString(output.LastEvaluatedTableName) == "" {
 			break
@@ -40,11 +30,27 @@ func fetchDynamodbTables(ctx context.Context, meta schema.ClientMeta, parent *sc
 
 	return nil
 }
+
+func getTable(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Dynamodb
+
+	tableName := resource.Item.(string)
+
+	response, err := svc.DescribeTable(ctx, &dynamodb.DescribeTableInput{TableName: &tableName})
+	if err != nil {
+		return err
+	}
+
+	resource.Item = response.Table
+	return nil
+}
+
 func resolveDynamodbTableTags(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
 	table := resource.Item.(*types.TableDescription)
 
 	cl := meta.(*client.Client)
-	svc := cl.Services().DynamoDB
+	svc := cl.Services().Dynamodb
 	response, err := svc.ListTagsOfResource(ctx, &dynamodb.ListTagsOfResourceInput{
 		ResourceArn: table.TableArn,
 	})
@@ -65,7 +71,7 @@ func fetchDynamodbTableReplicaAutoScalings(ctx context.Context, meta schema.Clie
 	}
 
 	c := meta.(*client.Client)
-	svc := c.Services().DynamoDB
+	svc := c.Services().Dynamodb
 
 	output, err := svc.DescribeTableReplicaAutoScaling(ctx, &dynamodb.DescribeTableReplicaAutoScalingInput{
 		TableName: par.TableName,
@@ -86,7 +92,7 @@ func fetchDynamodbTableContinuousBackups(ctx context.Context, meta schema.Client
 	par := parent.Item.(*types.TableDescription)
 
 	c := meta.(*client.Client)
-	svc := c.Services().DynamoDB
+	svc := c.Services().Dynamodb
 
 	output, err := svc.DescribeContinuousBackups(ctx, &dynamodb.DescribeContinuousBackupsInput{
 		TableName: par.TableName,

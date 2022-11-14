@@ -12,9 +12,10 @@ import (
 func ELBv2Resources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "load_balancers",
-			Struct:     &types.LoadBalancer{},
-			SkipFields: []string{"LoadBalancerArn"},
+			SubService:  "load_balancers",
+			Struct:      &types.LoadBalancer{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_LoadBalancer.html",
+			SkipFields:  []string{"LoadBalancerArn"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -42,9 +43,10 @@ func ELBv2Resources() []*Resource {
 			},
 		},
 		{
-			SubService: "listeners",
-			Struct:     &types.Listener{},
-			SkipFields: []string{"ListenerArn"},
+			SubService:  "listeners",
+			Struct:      &types.Listener{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_Listener.html",
+			SkipFields:  []string{"ListenerArn"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -65,37 +67,40 @@ func ELBv2Resources() []*Resource {
 			},
 		},
 		{
-			SubService: "listener_certificates",
-			Struct:     &types.Certificate{},
-			SkipFields: []string{},
+			SubService:  "listener_certificates",
+			Struct:      &types.Certificate{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_Certificate.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "listener_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "load_balancer_attributes",
-			Struct:     &types.LoadBalancerAttribute{},
-			SkipFields: []string{},
+			SubService:  "load_balancer_attributes",
+			Struct:      &types.LoadBalancerAttribute{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_LoadBalancerAttribute.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "load_balancer_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "target_groups",
-			Struct:     &types.TargetGroup{},
-			SkipFields: []string{"TargetGroupArn"},
+			SubService:  "target_groups",
+			Struct:      &types.TargetGroup{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_TargetGroup.html",
+			SkipFields:  []string{"TargetGroupArn"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -116,16 +121,17 @@ func ELBv2Resources() []*Resource {
 			},
 		},
 		{
-			SubService: "target_group_target_health_descriptions",
-			Struct:     &types.TargetHealthDescription{},
-			SkipFields: []string{},
+			SubService:  "target_group_target_health_descriptions",
+			Struct:      &types.TargetHealthDescription{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_TargetHealthDescription.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "target_group_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},

@@ -12,8 +12,9 @@ import (
 
 func configurations() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_mysql_configurations",
-		Resolver: fetchMySQLConfigurations,
+		Name:        "azure_mysql_configurations",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/mysql/mgmt/2020-01-01/mysql#Configuration`,
+		Resolver:    fetchMySQLConfigurations,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -22,8 +23,8 @@ func configurations() *schema.Table {
 			},
 			{
 				Name:     "mysql_server_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "value",

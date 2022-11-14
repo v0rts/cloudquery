@@ -9,9 +9,10 @@ import (
 
 func LoadBalancerPolicies() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_elbv1_load_balancer_policies",
-		Resolver:  fetchElbv1LoadBalancerPolicies,
-		Multiplex: client.ServiceAccountRegionMultiplexer("elasticloadbalancing"),
+		Name:        "aws_elbv1_load_balancer_policies",
+		Description: `https://docs.aws.amazon.com/elasticloadbalancing/2012-06-01/APIReference/API_PolicyDescription.html`,
+		Resolver:    fetchElbv1LoadBalancerPolicies,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("elasticloadbalancing"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,12 +27,12 @@ func LoadBalancerPolicies() *schema.Table {
 			{
 				Name:     "load_balancer_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "load_balancer_name",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("load_balancer_name"),
+				Resolver: schema.ParentColumnResolver("load_balancer_name"),
 			},
 			{
 				Name:     "policy_attribute_descriptions",

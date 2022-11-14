@@ -1,13 +1,15 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
-	"github.com/cloudquery/cq-provider-sdk/provider/diag"
-	"github.com/cloudquery/cq-provider-sdk/provider/schema"
-	"github.com/hashicorp/go-hclog"
+	"github.com/cloudquery/plugin-sdk/schema"
+	"github.com/cloudquery/plugin-sdk/specs"
+	"github.com/rs/zerolog"
 	"k8s.io/client-go/kubernetes"
+
 	// import all k8s auth options
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
@@ -15,106 +17,106 @@ import (
 )
 
 type Client struct {
-	Log      hclog.Logger
-	services map[string]Services
-	kConfig  api.Config
-	config   *Config
+	logger zerolog.Logger
+	// map context_name -> Services struct
+	clients  map[string]kubernetes.Interface
+	spec     *Spec
 	contexts []string
 	paths    map[string]struct{}
 
 	Context string
 }
 
-func (c *Client) Logger() hclog.Logger {
-	return c.Log
+func (c *Client) Logger() *zerolog.Logger {
+	return &c.logger
 }
 
-func (c *Client) Services() Services {
-	return c.services[c.Context]
+func (c *Client) ID() string {
+	return c.Context
 }
 
-func (c Client) WithContext(context string) *Client {
+func (c *Client) Client() kubernetes.Interface {
+	return c.clients[c.Context]
+}
+
+// Don't confuse `k8sContext` with `context.ctx`! k8s-context is a k8s-term that refers to a k8s cluster.
+func (c Client) WithContext(k8sContext string) *Client {
 	return &Client{
-		Log:      c.Log.With("context", context),
-		services: c.services,
-		kConfig:  c.kConfig,
-		config:   c.config,
-		Context:  context,
+		logger:   c.logger.With().Str("context", k8sContext).Logger(),
+		clients:  c.clients,
+		spec:     c.spec,
+		contexts: c.contexts,
+		paths:    c.paths,
+		Context:  k8sContext,
 	}
 }
 
-func (c *Client) SetServices(s map[string]Services) {
-	c.services = s
-	contexts := make([]string, 0, len(s))
-	for k := range s {
-		contexts = append(contexts, k)
-	}
-	c.contexts = contexts
-}
+func Configure(ctx context.Context, logger zerolog.Logger, s specs.Source) (schema.ClientMeta, error) {
+	var k8sSpec Spec
 
-func Configure(logger hclog.Logger, config interface{}) (schema.ClientMeta, diag.Diagnostics) {
+	if err := s.UnmarshalSpec(&k8sSpec); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal k8s spec: %w", err)
+	}
+
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		clientcmd.NewDefaultClientConfigLoadingRules(),
 		&clientcmd.ConfigOverrides{},
 	)
-	kCfg, err := kubeConfig.RawConfig()
+	rawKubeConfig, err := kubeConfig.RawConfig()
 	if err != nil {
-		return nil, diag.FromError(err, diag.USER)
+		return nil, err
 	}
 
-	cfg := config.(*Config)
-
 	var contexts []string
-	switch len(cfg.Contexts) {
+	switch len(k8sSpec.Contexts) {
 	case 0:
-		logger.Debug("no context set in configuration using current default defined context", "context", kCfg.CurrentContext)
-		contexts = []string{kCfg.CurrentContext}
+		logger.Debug().Str("context", rawKubeConfig.CurrentContext).Msg("no context set in configuration using current default defined context")
+		contexts = []string{rawKubeConfig.CurrentContext}
 	case 1:
-		if cfg.Contexts[0] == "*" {
-			logger.Debug("loading all available configuration")
-			for cName := range kCfg.Contexts {
+		if k8sSpec.Contexts[0] == "*" {
+			logger.Debug().Msg("loading all available configuration")
+			for cName := range rawKubeConfig.Contexts {
 				contexts = append(contexts, cName)
 			}
 		} else {
-			if _, ok := kCfg.Contexts[cfg.Contexts[0]]; !ok {
-				return nil, diag.FromError(fmt.Errorf("context %q doesn't exist in kube configuration", cfg.Contexts[0]), diag.USER)
+			if _, ok := rawKubeConfig.Contexts[k8sSpec.Contexts[0]]; !ok {
+				return nil, fmt.Errorf("context %q doesn't exist in kube configuration", k8sSpec.Contexts[0])
 			}
-			contexts = []string{cfg.Contexts[0]}
+			contexts = []string{k8sSpec.Contexts[0]}
 		}
 	default:
-		for _, cName := range cfg.Contexts {
-			if _, ok := kCfg.Contexts[cName]; !ok {
-				return nil, diag.FromError(fmt.Errorf("context %q doesn't exist in kube configuration", cName), diag.USER)
+		for _, cName := range k8sSpec.Contexts {
+			if _, ok := rawKubeConfig.Contexts[cName]; !ok {
+				return nil, fmt.Errorf("context %q doesn't exist in kube configuration", cName)
 			}
 			contexts = append(contexts, cName)
 		}
 	}
 
 	if len(contexts) == 0 {
-		return nil, diag.FromError(fmt.Errorf("could not find any context"), diag.USER, diag.WithDetails("Try to add context, https://kubernetes.io/docs/reference/kubectl/cheatsheet/#kubectl-context-and-configuration"))
+		return nil, fmt.Errorf("could not find any context. Try to add context, https://kubernetes.io/docs/reference/kubectl/cheatsheet/#kubectl-context-and-configuration")
 	}
 
 	c := Client{
-		Log:      logger,
-		services: make(map[string]Services),
-		kConfig:  kCfg,
-		config:   cfg,
+		logger:   logger,
+		clients:  make(map[string]kubernetes.Interface),
+		spec:     &k8sSpec,
 		contexts: contexts,
 		Context:  contexts[0],
 		paths:    make(map[string]struct{}),
 	}
 
 	for _, ctxName := range contexts {
-		logger.Info("creating k8s client for context", "context", ctxName)
-		kClient, err := buildKubeClient(kCfg, ctxName)
+		logger.Info().Str("context", ctxName).Msg("creating k8s client for context")
+		kClient, err := buildKubeClient(rawKubeConfig, ctxName)
 		if err != nil {
-			return nil, diag.FromError(fmt.Errorf("failed to build k8s client for context %q: %w", ctxName, err), diag.INTERNAL)
+			return nil, fmt.Errorf("failed to build k8s client for context %q: %w", ctxName, err)
 		}
 		c.paths, err = getAPIsMap(kClient)
 		if err != nil {
-			c.Logger().Warn("Failed to get OpenAPI schema. It might be not supported in the current version of Kubernetes. OpenAPI has been supported since Kubernetes 1.4", "err", err)
+			logger.Warn().Err(err).Msg("Failed to get OpenAPI schema. It might be not supported in the current version of Kubernetes. OpenAPI has been supported since Kubernetes 1.4")
 		}
-		c.services[ctxName] = initServices(kClient)
+		c.clients[ctxName] = kClient
 	}
 
 	return &c, nil
@@ -149,27 +151,4 @@ func getAPIsMap(client *kubernetes.Clientset) (map[string]struct{}, error) {
 		}
 	}
 	return paths, nil
-}
-
-func initServices(client *kubernetes.Clientset) Services {
-	return Services{
-		Client:          client,
-		CronJobs:        client.BatchV1().CronJobs(""),
-		DaemonSets:      client.AppsV1().DaemonSets(""),
-		Deployments:     client.AppsV1().Deployments(""),
-		Endpoints:       client.CoreV1().Endpoints(""),
-		Jobs:            client.BatchV1().Jobs(""),
-		LimitRanges:     client.CoreV1().LimitRanges(""),
-		Namespaces:      client.CoreV1().Namespaces(),
-		NetworkPolicies: client.NetworkingV1().NetworkPolicies(""),
-		Nodes:           client.CoreV1().Nodes(),
-		Pods:            client.CoreV1().Pods(""),
-		ReplicaSets:     client.AppsV1().ReplicaSets(""),
-		ResourceQuotas:  client.CoreV1().ResourceQuotas(""),
-		RoleBindings:    client.RbacV1().RoleBindings(""),
-		Roles:           client.RbacV1().Roles(""),
-		ServiceAccounts: client.CoreV1().ServiceAccounts(""),
-		Services:        client.CoreV1().Services(""),
-		StatefulSets:    client.AppsV1().StatefulSets(""),
-	}
 }

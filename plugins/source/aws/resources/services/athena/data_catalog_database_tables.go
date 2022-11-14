@@ -9,9 +9,10 @@ import (
 
 func DataCatalogDatabaseTables() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_athena_data_catalog_database_tables",
-		Resolver:  fetchAthenaDataCatalogDatabaseTables,
-		Multiplex: client.ServiceAccountRegionMultiplexer("athena"),
+		Name:        "aws_athena_data_catalog_database_tables",
+		Description: `https://docs.aws.amazon.com/athena/latest/APIReference/API_TableMetadata.html`,
+		Resolver:    fetchAthenaDataCatalogDatabaseTables,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("athena"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func DataCatalogDatabaseTables() *schema.Table {
 			{
 				Name:     "data_catalog_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("data_catalog_arn"),
+				Resolver: schema.ParentColumnResolver("data_catalog_arn"),
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
@@ -34,7 +35,7 @@ func DataCatalogDatabaseTables() *schema.Table {
 			{
 				Name:     "data_catalog_database_name",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("name"),
+				Resolver: schema.ParentColumnResolver("name"),
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},

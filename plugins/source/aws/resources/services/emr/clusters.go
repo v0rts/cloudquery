@@ -9,9 +9,11 @@ import (
 
 func Clusters() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_emr_clusters",
-		Resolver:  fetchEmrClusters,
-		Multiplex: client.ServiceAccountRegionMultiplexer("elasticmapreduce"),
+		Name:                "aws_emr_clusters",
+		Description:         `https://docs.aws.amazon.com/emr/latest/APIReference/API_Cluster.html`,
+		Resolver:            fetchEmrClusters,
+		PreResourceResolver: getCluster,
+		Multiplex:           client.ServiceAccountRegionMultiplexer("elasticmapreduce"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -30,11 +32,6 @@ func Clusters() *schema.Table {
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
-			},
-			{
-				Name:     "tags",
-				Type:     schema.TypeJSON,
-				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "applications",
@@ -67,7 +64,7 @@ func Clusters() *schema.Table {
 				Resolver: schema.PathResolver("EbsRootVolumeSize"),
 			},
 			{
-				Name:     "ec_2_instance_attributes",
+				Name:     "ec2_instance_attributes",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("Ec2InstanceAttributes"),
 			},
@@ -170,6 +167,11 @@ func Clusters() *schema.Table {
 				Name:     "step_concurrency_level",
 				Type:     schema.TypeInt,
 				Resolver: schema.PathResolver("StepConcurrencyLevel"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "termination_protected",

@@ -2,25 +2,54 @@ package athena
 
 import (
 	"context"
-	"errors"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/athena"
 	"github.com/aws/aws-sdk-go-v2/service/athena/types"
-	"github.com/aws/smithy-go"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
 
 func fetchAthenaWorkGroups(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
-	return client.ListAndDetailResolver(ctx, meta, res, listWorkGroups, workGroupDetail)
+	c := meta.(*client.Client)
+	svc := c.Services().Athena
+	input := athena.ListWorkGroupsInput{}
+	for {
+		response, err := svc.ListWorkGroups(ctx, &input)
+		if err != nil {
+			return err
+		}
+		res <- response.WorkGroups
+		if aws.ToString(response.NextToken) == "" {
+			break
+		}
+		input.NextToken = response.NextToken
+	}
+
+	return nil
 }
+
+func getWorkGroup(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Athena
+
+	wg := resource.Item.(types.WorkGroupSummary)
+	dc, err := svc.GetWorkGroup(ctx, &athena.GetWorkGroupInput{
+		WorkGroup: wg.Name,
+	})
+	if err != nil {
+		return err
+	}
+	resource.Item = *dc.WorkGroup
+	return nil
+}
+
 func resolveAthenaWorkGroupArn(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
 	cl := meta.(*client.Client)
 	dc := resource.Item.(types.WorkGroup)
 	return resource.Set(c.Name, createWorkGroupArn(cl, *dc.Name))
 }
+
 func resolveAthenaWorkGroupTags(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
 	cl := meta.(*client.Client)
 	svc := cl.Services().Athena
@@ -44,6 +73,7 @@ func resolveAthenaWorkGroupTags(ctx context.Context, meta schema.ClientMeta, res
 	}
 	return resource.Set(c.Name, tags)
 }
+
 func fetchAthenaWorkGroupPreparedStatements(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
 	svc := c.Services().Athena
@@ -54,20 +84,7 @@ func fetchAthenaWorkGroupPreparedStatements(ctx context.Context, meta schema.Cli
 		if err != nil {
 			return err
 		}
-		for _, d := range response.PreparedStatements {
-			dc, err := svc.GetPreparedStatement(ctx, &athena.GetPreparedStatementInput{
-				WorkGroup:     wg.Name,
-				StatementName: d.StatementName,
-			})
-			if err != nil {
-				if c.IsNotFoundError(err) {
-					continue
-				}
-				return err
-			}
-			res <- *dc.PreparedStatement
-			return nil
-		}
+		res <- response.PreparedStatements
 		if aws.ToString(response.NextToken) == "" {
 			break
 		}
@@ -75,6 +92,24 @@ func fetchAthenaWorkGroupPreparedStatements(ctx context.Context, meta schema.Cli
 	}
 	return nil
 }
+
+func getWorkGroupPreparedStatement(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Athena
+	wg := resource.Parent.Item.(types.WorkGroup)
+
+	d := resource.Item.(types.PreparedStatementSummary)
+	dc, err := svc.GetPreparedStatement(ctx, &athena.GetPreparedStatementInput{
+		WorkGroup:     wg.Name,
+		StatementName: d.StatementName,
+	})
+	if err != nil {
+		return err
+	}
+	resource.Item = *dc.PreparedStatement
+	return nil
+}
+
 func fetchAthenaWorkGroupQueryExecutions(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
 	svc := c.Services().Athena
@@ -85,19 +120,7 @@ func fetchAthenaWorkGroupQueryExecutions(ctx context.Context, meta schema.Client
 		if err != nil {
 			return err
 		}
-		for _, d := range response.QueryExecutionIds {
-			dc, err := svc.GetQueryExecution(ctx, &athena.GetQueryExecutionInput{
-				QueryExecutionId: aws.String(d),
-			})
-			if err != nil {
-				if c.IsNotFoundError(err) || isQueryExecutionNotFound(err) {
-					continue
-				}
-				return err
-			}
-			res <- *dc.QueryExecution
-			return nil
-		}
+		res <- response.QueryExecutionIds
 		if aws.ToString(response.NextToken) == "" {
 			break
 		}
@@ -105,6 +128,22 @@ func fetchAthenaWorkGroupQueryExecutions(ctx context.Context, meta schema.Client
 	}
 	return nil
 }
+
+func getWorkGroupQueryExecution(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Athena
+
+	d := resource.Item.(string)
+	dc, err := svc.GetQueryExecution(ctx, &athena.GetQueryExecutionInput{
+		QueryExecutionId: aws.String(d),
+	})
+	if err != nil {
+		return err
+	}
+	resource.Item = *dc.QueryExecution
+	return nil
+}
+
 func fetchAthenaWorkGroupNamedQueries(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
 	svc := c.Services().Athena
@@ -115,19 +154,7 @@ func fetchAthenaWorkGroupNamedQueries(ctx context.Context, meta schema.ClientMet
 		if err != nil {
 			return err
 		}
-		for _, d := range response.NamedQueryIds {
-			dc, err := svc.GetNamedQuery(ctx, &athena.GetNamedQueryInput{
-				NamedQueryId: aws.String(d),
-			})
-			if err != nil {
-				if c.IsNotFoundError(err) {
-					continue
-				}
-				return err
-			}
-			res <- *dc.NamedQuery
-			return nil
-		}
+		res <- response.NamedQueryIds
 		if aws.ToString(response.NextToken) == "" {
 			break
 		}
@@ -136,56 +163,21 @@ func fetchAthenaWorkGroupNamedQueries(ctx context.Context, meta schema.ClientMet
 	return nil
 }
 
-// ====================================================================================================================
-//                                                  User Defined Helpers
-// ====================================================================================================================
-
-func listWorkGroups(ctx context.Context, meta schema.ClientMeta, detailChan chan<- interface{}) error {
+func getWorkGroupNamedQuery(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
 	c := meta.(*client.Client)
 	svc := c.Services().Athena
-	input := athena.ListWorkGroupsInput{}
-	for {
-		response, err := svc.ListWorkGroups(ctx, &input, func(options *athena.Options) {
-			options.Region = c.Region
-		})
-		if err != nil {
-			return err
-		}
-		for _, item := range response.WorkGroups {
-			detailChan <- item
-		}
 
-		if aws.ToString(response.NextToken) == "" {
-			break
-		}
-		input.NextToken = response.NextToken
-	}
-
-	return nil
-}
-func workGroupDetail(ctx context.Context, meta schema.ClientMeta, resultsChan chan<- interface{}, errorChan chan<- error, summary interface{}) {
-	c := meta.(*client.Client)
-	svc := c.Services().Athena
-	wg := summary.(types.WorkGroupSummary)
-	dc, err := svc.GetWorkGroup(ctx, &athena.GetWorkGroupInput{
-		WorkGroup: wg.Name,
+	d := resource.Item.(string)
+	dc, err := svc.GetNamedQuery(ctx, &athena.GetNamedQueryInput{
+		NamedQueryId: aws.String(d),
 	})
 	if err != nil {
-		if c.IsNotFoundError(err) {
-			return
-		}
-		errorChan <- err
-		return
+		return err
 	}
-	resultsChan <- *dc.WorkGroup
+	resource.Item = *dc.NamedQuery
+	return nil
 }
+
 func createWorkGroupArn(cl *client.Client, groupName string) string {
 	return cl.ARN(client.Athena, "workgroup", groupName)
-}
-func isQueryExecutionNotFound(err error) bool {
-	var ae smithy.APIError
-	if !errors.As(err, &ae) {
-		return false
-	}
-	return ae.ErrorCode() == "InvalidRequestException" && strings.Contains(ae.ErrorMessage(), "was not found")
 }

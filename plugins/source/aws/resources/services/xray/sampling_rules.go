@@ -9,9 +9,10 @@ import (
 
 func SamplingRules() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_xray_sampling_rules",
-		Resolver:  fetchXraySamplingRules,
-		Multiplex: client.ServiceAccountRegionMultiplexer("xray"),
+		Name:        "aws_xray_sampling_rules",
+		Description: `https://docs.aws.amazon.com/xray/latest/api/API_SamplingRuleRecord.html`,
+		Resolver:    fetchXraySamplingRules,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("xray"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -22,6 +23,14 @@ func SamplingRules() *schema.Table {
 				Name:     "region",
 				Type:     schema.TypeString,
 				Resolver: client.ResolveAWSRegion,
+			},
+			{
+				Name:     "arn",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("SamplingRule.RuleARN"),
+				CreationOptions: schema.ColumnCreationOptions{
+					PrimaryKey: true,
+				},
 			},
 			{
 				Name:     "tags",

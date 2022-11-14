@@ -9,8 +9,9 @@ import (
 
 func AnalyzerArchiveRules() *schema.Table {
 	return &schema.Table{
-		Name:     "aws_accessanalyzer_analyzer_archive_rules",
-		Resolver: fetchAccessanalyzerAnalyzerArchiveRules,
+		Name:        "aws_accessanalyzer_analyzer_archive_rules",
+		Description: `https://docs.aws.amazon.com/access-analyzer/latest/APIReference/API_ArchiveRuleSummary.html`,
+		Resolver:    fetchAccessanalyzerAnalyzerArchiveRules,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -25,7 +26,7 @@ func AnalyzerArchiveRules() *schema.Table {
 			{
 				Name:     "analyzer_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentPathResolver("Arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "created_at",

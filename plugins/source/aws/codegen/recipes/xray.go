@@ -9,13 +9,15 @@ import (
 func XRayResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "encryption_config",
-			Struct:     &types.EncryptionConfig{},
+			SubService:  "encryption_config",
+			Struct:      &types.EncryptionConfig{},
+			Description: "https://docs.aws.amazon.com/xray/latest/api/API_EncryptionConfig.html",
 		},
 		{
-			SubService: "groups",
-			Struct:     &types.Group{},
-			SkipFields: []string{"GroupARN"},
+			SubService:  "groups",
+			Struct:      &types.Group{},
+			Description: "https://docs.aws.amazon.com/xray/latest/api/API_Group.html",
+			SkipFields:  []string{"GroupARN"},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "arn",
@@ -31,9 +33,16 @@ func XRayResources() []*Resource {
 			},
 		},
 		{
-			SubService: "sampling_rules",
-			Struct:     &types.SamplingRuleRecord{},
+			SubService:  "sampling_rules",
+			Struct:      &types.SamplingRuleRecord{},
+			Description: "https://docs.aws.amazon.com/xray/latest/api/API_SamplingRuleRecord.html",
 			ExtraColumns: []codegen.ColumnDefinition{
+				{
+					Name:     "arn",
+					Type:     schema.TypeString,
+					Resolver: `schema.PathResolver("SamplingRule.RuleARN")`,
+					Options:  schema.ColumnCreationOptions{PrimaryKey: true},
+				},
 				{
 					Name:     "tags",
 					Type:     schema.TypeJSON,

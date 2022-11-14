@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/guardduty/types"
-	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/guardduty"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/guardduty/models"
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
@@ -13,9 +13,11 @@ import (
 func GuarddutyResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "detectors",
-			Struct:     &guardduty.DetectorWrapper{},
-			SkipFields: []string{"Id"},
+			SubService:          "detectors",
+			Struct:              &models.DetectorWrapper{},
+			Description:         "https://docs.aws.amazon.com/guardduty/latest/APIReference/API_GetDetector.html",
+			SkipFields:          []string{"Id"},
+			PreResourceResolver: "getDetector",
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -45,9 +47,10 @@ func GuarddutyResources() []*Resource {
 			},
 		},
 		{
-			SubService: "detector_members",
-			Struct:     &types.Member{},
-			SkipFields: []string{},
+			SubService:  "detector_members",
+			Struct:      &types.Member{},
+			Description: "https://docs.aws.amazon.com/guardduty/latest/APIReference/API_Member.html",
+			SkipFields:  []string{},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "region",
@@ -57,7 +60,7 @@ func GuarddutyResources() []*Resource {
 				{
 					Name:     "detector_arn",
 					Type:     schema.TypeString,
-					Resolver: `schema.ParentResourceFieldResolver("arn")`,
+					Resolver: `schema.ParentColumnResolver("arn")`,
 				},
 			},
 		},

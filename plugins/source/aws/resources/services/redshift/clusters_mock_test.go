@@ -8,24 +8,24 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/redshift/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client/mocks"
-	"github.com/cloudquery/faker/v3"
+	"github.com/cloudquery/plugin-sdk/faker"
 	"github.com/golang/mock/gomock"
 )
 
 func buildRedshiftClustersMock(t *testing.T, ctrl *gomock.Controller) client.Services {
 	m := mocks.NewMockRedshiftClient(ctrl)
 	g := types.Cluster{}
-	err := faker.FakeData(&g)
+	err := faker.FakeObject(&g)
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := types.Parameter{}
-	err = faker.FakeData(&p)
+	err = faker.FakeObject(&p)
 	if err != nil {
 		t.Fatal(err)
 	}
 	logging := redshift.DescribeLoggingStatusOutput{}
-	err = faker.FakeData(&p)
+	err = faker.FakeObject(&logging)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,15 +34,15 @@ func buildRedshiftClustersMock(t *testing.T, ctrl *gomock.Controller) client.Ser
 		&redshift.DescribeClustersOutput{
 			Clusters: []types.Cluster{g},
 		}, nil)
-	//m.EXPECT().DescribeClusterParameters(gomock.Any(), gomock.Any(), gomock.Any()).Return(
-	//	&redshift.DescribeClusterParametersOutput{
-	//		Parameters: []types.Parameter{p},
-	//	}, nil)
+	m.EXPECT().DescribeClusterParameters(gomock.Any(), gomock.Any(), gomock.Any()).Return(
+		&redshift.DescribeClusterParametersOutput{
+			Parameters: []types.Parameter{p},
+		}, nil)
 	m.EXPECT().DescribeLoggingStatus(gomock.Any(), gomock.Any(), gomock.Any()).Return(
 		&logging, nil)
 
 	var snap types.Snapshot
-	if err := faker.FakeData(&snap); err != nil {
+	if err := faker.FakeObject(&snap); err != nil {
 		t.Fatal(err)
 	}
 	snap.ClusterIdentifier = g.ClusterIdentifier
@@ -69,7 +69,7 @@ func buildRedshiftSubnetGroupsMock(t *testing.T, ctrl *gomock.Controller) client
 	m := mocks.NewMockRedshiftClient(ctrl)
 
 	g := types.ClusterSubnetGroup{}
-	err := faker.FakeData(&g)
+	err := faker.FakeObject(&g)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -9,9 +9,10 @@ import (
 func APIGatewayResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "api_keys",
-			Struct:     &types.ApiKey{},
-			SkipFields: []string{},
+			SubService:  "api_keys",
+			Struct:      &types.ApiKey{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_ApiKey.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -24,9 +25,10 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "client_certificates",
-			Struct:     &types.ClientCertificate{},
-			SkipFields: []string{},
+			SubService:  "client_certificates",
+			Struct:      &types.ClientCertificate{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_ClientCertificate.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -39,9 +41,10 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "domain_names",
-			Struct:     &types.DomainName{},
-			SkipFields: []string{},
+			SubService:  "domain_names",
+			Struct:      &types.DomainName{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_DomainName.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -57,16 +60,17 @@ func APIGatewayResources() []*Resource {
 			},
 		},
 		{
-			SubService: "domain_name_base_path_mappings",
-			Struct:     &types.BasePathMapping{},
-			SkipFields: []string{},
+			SubService:  "domain_name_base_path_mappings",
+			Struct:      &types.BasePathMapping{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_BasePathMapping.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "domain_name_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -76,9 +80,10 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_apis",
-			Struct:     &types.RestApi{},
-			SkipFields: []string{},
+			SubService:  "rest_apis",
+			Struct:      &types.RestApi{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_RestApi.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -102,16 +107,17 @@ func APIGatewayResources() []*Resource {
 			},
 		},
 		{
-			SubService: "rest_api_authorizers",
-			Struct:     &types.Authorizer{},
-			SkipFields: []string{},
+			SubService:  "rest_api_authorizers",
+			Struct:      &types.Authorizer{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_Authorizer.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -121,16 +127,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_deployments",
-			Struct:     &types.Deployment{},
-			SkipFields: []string{},
+			SubService:  "rest_api_deployments",
+			Struct:      &types.Deployment{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_Deployment.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -140,16 +147,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_documentation_parts",
-			Struct:     &types.DocumentationPart{},
-			SkipFields: []string{},
+			SubService:  "rest_api_documentation_parts",
+			Struct:      &types.DocumentationPart{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_DocumentationPart.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -159,16 +167,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_documentation_versions",
-			Struct:     &types.DocumentationVersion{},
-			SkipFields: []string{},
+			SubService:  "rest_api_documentation_versions",
+			Struct:      &types.DocumentationVersion{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_DocumentationVersion.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -178,16 +187,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_gateway_responses",
-			Struct:     &types.GatewayResponse{},
-			SkipFields: []string{},
+			SubService:  "rest_api_gateway_responses",
+			Struct:      &types.GatewayResponse{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_GatewayResponse.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -197,16 +207,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_models",
-			Struct:     &types.Model{},
-			SkipFields: []string{},
+			SubService:  "rest_api_models",
+			Struct:      &types.Model{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_Model.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -221,16 +232,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_request_validators",
-			Struct:     &types.RequestValidator{},
-			SkipFields: []string{},
+			SubService:  "rest_api_request_validators",
+			Struct:      &types.RequestValidator{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_RequestValidator.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -240,16 +252,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_resources",
-			Struct:     &types.Resource{},
-			SkipFields: []string{},
+			SubService:  "rest_api_resources",
+			Struct:      &types.Resource{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_Resource.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -259,16 +272,17 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "rest_api_stages",
-			Struct:     &types.Stage{},
-			SkipFields: []string{},
+			SubService:  "rest_api_stages",
+			Struct:      &types.Stage{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_Stage.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "rest_api_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -278,9 +292,10 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "usage_plans",
-			Struct:     &types.UsagePlan{},
-			SkipFields: []string{},
+			SubService:  "usage_plans",
+			Struct:      &types.UsagePlan{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_UsagePlan.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -295,16 +310,17 @@ func APIGatewayResources() []*Resource {
 			},
 		},
 		{
-			SubService: "usage_plan_keys",
-			Struct:     &types.UsagePlanKey{},
-			SkipFields: []string{},
+			SubService:  "usage_plan_keys",
+			Struct:      &types.UsagePlanKey{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_UsagePlanKey.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "usage_plan_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "arn",
@@ -314,9 +330,10 @@ func APIGatewayResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "vpc_links",
-			Struct:     &types.VpcLink{},
-			SkipFields: []string{},
+			SubService:  "vpc_links",
+			Struct:      &types.VpcLink{},
+			Description: "https://docs.aws.amazon.com/apigateway/latest/api/API_VpcLink.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{

@@ -59,8 +59,8 @@ func Sinks() *schema.Table {
 			},
 			{
 				Name:     "output_version_format",
-				Type:     schema.TypeInt,
-				Resolver: schema.PathResolver("OutputVersionFormat"),
+				Type:     schema.TypeString,
+				Resolver: client.ResolveProtoEnum("OutputVersionFormat"),
 			},
 			{
 				Name:     "writer_identity",
@@ -74,13 +74,13 @@ func Sinks() *schema.Table {
 			},
 			{
 				Name:     "create_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("CreateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("CreateTime"),
 			},
 			{
 				Name:     "update_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("UpdateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("UpdateTime"),
 			},
 		},
 	}

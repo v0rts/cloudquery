@@ -1,12 +1,19 @@
-
 # Table: aws_waf_rules
-This is AWS WAF Classic documentation
+
+https://docs.aws.amazon.com/waf/latest/APIReference/API_waf_RuleSummary.html
+
+The primary key for this table is **arn**.
+
+
 ## Columns
-| Name        | Type           | Description  |
-| ------------- | ------------- | -----  |
-|account_id|text||
-|arn|text||
-|tags|jsonb||
-|id|text|A unique identifier for a Rule|
-|metric_name|text|A friendly name or description for the metrics for this Rule|
-|name|text|The friendly name or description for the Rule|
+| Name          | Type          |
+| ------------- | ------------- |
+|_cq_source_name|String|
+|_cq_sync_time|Timestamp|
+|_cq_id|UUID|
+|_cq_parent_id|UUID|
+|account_id|String|
+|arn (PK)|String|
+|tags|JSON|
+|name|String|
+|rule_id|String|

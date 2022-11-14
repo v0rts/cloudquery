@@ -9,9 +9,10 @@ import (
 
 func DbSecurityGroups() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_rds_db_security_groups",
-		Resolver:  fetchRdsDbSecurityGroups,
-		Multiplex: client.ServiceAccountRegionMultiplexer("rds"),
+		Name:        "aws_rds_db_security_groups",
+		Description: `https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DBSecurityGroup.html`,
+		Resolver:    fetchRdsDbSecurityGroups,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("rds"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -47,7 +48,7 @@ func DbSecurityGroups() *schema.Table {
 				Resolver: schema.PathResolver("DBSecurityGroupName"),
 			},
 			{
-				Name:     "ec_2_security_groups",
+				Name:     "ec2_security_groups",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("EC2SecurityGroups"),
 			},

@@ -13,8 +13,9 @@ import (
 
 func accessKeys() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_servicebus_access_keys",
-		Resolver: fetchServicebusAccessKeys,
+		Name:        "azure_servicebus_access_keys",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/preview/servicebus/mgmt/2021-06-01-preview/servicebus#AccessKeys`,
+		Resolver:    fetchServicebusAccessKeys,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func accessKeys() *schema.Table {
 			},
 			{
 				Name:     "servicebus_authorization_rule_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "primary_connection_string",

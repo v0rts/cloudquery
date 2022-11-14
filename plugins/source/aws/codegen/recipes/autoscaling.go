@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling/types"
-	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/autoscaling"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/autoscaling/models"
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
@@ -13,9 +13,10 @@ import (
 func AutoscalingResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "launch_configurations",
-			Struct:     &types.LaunchConfiguration{},
-			SkipFields: []string{"LaunchConfigurationARN"},
+			SubService:  "launch_configurations",
+			Struct:      &types.LaunchConfiguration{},
+			Description: "https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_LaunchConfiguration.html",
+			SkipFields:  []string{"LaunchConfigurationARN"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -28,9 +29,10 @@ func AutoscalingResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "groups",
-			Struct:     &autoscaling.AutoScalingGroupWrapper{},
-			SkipFields: []string{"AutoScalingGroupARN"},
+			SubService:  "groups",
+			Struct:      &models.AutoScalingGroupWrapper{},
+			Description: "https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_AutoScalingGroup.html",
+			SkipFields:  []string{"AutoScalingGroupARN"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -57,37 +59,46 @@ func AutoscalingResources() []*Resource {
 			},
 		},
 		{
-			SubService: "group_scaling_policies",
-			Struct:     &types.ScalingPolicy{},
-			SkipFields: []string{},
+			SubService:  "group_scaling_policies",
+			Struct:      &types.ScalingPolicy{},
+			Description: "https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_ScalingPolicy.html",
+			SkipFields:  []string{"PolicyARN"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "group_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
+					},
+					{
+						Name:     "arn",
+						Type:     schema.TypeString,
+						Resolver: `schema.PathResolver("PolicyARN")`,
+						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 				}...),
 		},
 		{
-			SubService: "group_lifecycle_hooks",
-			Struct:     &types.LifecycleHook{},
-			SkipFields: []string{},
+			SubService:  "group_lifecycle_hooks",
+			Struct:      &types.LifecycleHook{},
+			Description: "https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_LifecycleHook.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "group_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "scheduled_actions",
-			Struct:     &types.ScheduledUpdateGroupAction{},
-			SkipFields: []string{"ScheduledActionARN"},
+			SubService:  "scheduled_actions",
+			Struct:      &types.ScheduledUpdateGroupAction{},
+			Description: "https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_ScheduledUpdateGroupAction.html",
+			SkipFields:  []string{"ScheduledActionARN"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{

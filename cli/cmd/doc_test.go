@@ -2,32 +2,26 @@ package cmd
 
 import (
 	"os"
+	"path"
 	"testing"
 )
 
 var docFiles = []string{
 	"cloudquery.md",
-	"cloudquery_completion.md",
-	"cloudquery_completion_bash.md",
-	"cloudquery_completion_fish.md",
-	"cloudquery_completion_powershell.md",
-	"cloudquery_completion_zsh.md",
-	"cloudquery_generate.md",
 	"cloudquery_sync.md",
+	"cloudquery_migrate.md",
 }
 
 func TestDoc(t *testing.T) {
-	tmpdir, tmpErr := os.MkdirTemp("", "docs_*")
-	if tmpErr != nil {
-		t.Fatalf("failed to create temporary directory: %v", tmpErr)
-	}
-	defer os.RemoveAll(tmpdir)
 	cmd := NewCmdRoot()
-	cmd.SetArgs([]string{"doc", tmpdir})
+	tmpDir := t.TempDir()
+	cqTmpDir := t.TempDir()
+	logFileName := path.Join(cqTmpDir, "cloudquery.log")
+	cmd.SetArgs([]string{"doc", tmpDir, "--cq-dir", cqTmpDir, "--log-file-name", logFileName})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	files, err := os.ReadDir(tmpdir)
+	files, err := os.ReadDir(tmpDir)
 	if err != nil {
 		t.Fatal(err)
 	}

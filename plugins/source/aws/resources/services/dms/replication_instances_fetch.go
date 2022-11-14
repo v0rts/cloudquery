@@ -4,19 +4,14 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/service/databasemigrationservice"
-	"github.com/aws/aws-sdk-go-v2/service/databasemigrationservice/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/dms/models"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
 
-type ReplicationInstanceWrapper struct {
-	types.ReplicationInstance
-	Tags map[string]interface{}
-}
-
 func fetchDmsReplicationInstances(ctx context.Context, meta schema.ClientMeta, _ *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
-	svc := c.Services().DMS
+	svc := c.Services().Databasemigrationservice
 
 	var describeReplicationInstancesInput *databasemigrationservice.DescribeReplicationInstancesInput
 	describeReplicationInstancesOutput, err := svc.DescribeReplicationInstances(ctx, describeReplicationInstancesInput)
@@ -45,7 +40,7 @@ func fetchDmsReplicationInstances(ctx context.Context, meta schema.ClientMeta, _
 	}
 
 	for _, replicationInstance := range describeReplicationInstancesOutput.ReplicationInstances {
-		wrapper := ReplicationInstanceWrapper{
+		wrapper := models.ReplicationInstanceWrapper{
 			ReplicationInstance: replicationInstance,
 			Tags:                replicationInstanceTags[*replicationInstance.ReplicationInstanceArn],
 		}

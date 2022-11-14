@@ -9,9 +9,10 @@ import (
 
 func Eips() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ec2_eips",
-		Resolver:  fetchEc2Eips,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ec2"),
+		Name:        "aws_ec2_eips",
+		Description: `https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Address.html`,
+		Resolver:    fetchEc2Eips,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("ec2"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -44,7 +45,7 @@ func Eips() *schema.Table {
 				Resolver: schema.PathResolver("CustomerOwnedIp"),
 			},
 			{
-				Name:     "customer_owned_ipv_4_pool",
+				Name:     "customer_owned_ipv4_pool",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("CustomerOwnedIpv4Pool"),
 			},
@@ -84,14 +85,14 @@ func Eips() *schema.Table {
 				Resolver: schema.PathResolver("PublicIp"),
 			},
 			{
-				Name:     "public_ipv_4_pool",
+				Name:     "public_ipv4_pool",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("PublicIpv4Pool"),
 			},
 			{
 				Name:     "tags",
 				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("Tags"),
+				Resolver: client.ResolveTags,
 			},
 		},
 	}

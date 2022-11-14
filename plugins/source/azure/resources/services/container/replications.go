@@ -12,8 +12,9 @@ import (
 
 func replications() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_container_replications",
-		Resolver: fetchContainerReplications,
+		Name:        "azure_container_replications",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-05-01/containerregistry#Replication`,
+		Resolver:    fetchContainerReplications,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -22,8 +23,8 @@ func replications() *schema.Table {
 			},
 			{
 				Name:     "container_registry_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "provisioning_state",

@@ -9,9 +9,10 @@ import (
 
 func TableContinuousBackups() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_dynamodb_table_continuous_backups",
-		Resolver:  fetchDynamodbTableContinuousBackups,
-		Multiplex: client.ServiceAccountRegionMultiplexer("dynamodb"),
+		Name:        "aws_dynamodb_table_continuous_backups",
+		Description: `https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_ContinuousBackupsDescription.html`,
+		Resolver:    fetchDynamodbTableContinuousBackups,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("dynamodb"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func TableContinuousBackups() *schema.Table {
 			{
 				Name:     "table_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "continuous_backups_status",

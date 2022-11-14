@@ -13,8 +13,9 @@ import (
 
 func serverDevOpsAuditingSettings() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_sql_server_dev_ops_auditing_settings",
-		Resolver: fetchSQLServerDevOpsAuditingSettings,
+		Name:        "azure_sql_server_dev_ops_auditing_settings",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/preview/sql/mgmt/v4.0/sql#ServerDevOpsAuditingSettings`,
+		Resolver:    fetchSQLServerDevOpsAuditingSettings,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func serverDevOpsAuditingSettings() *schema.Table {
 			},
 			{
 				Name:     "sql_server_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "system_data",
@@ -50,6 +51,11 @@ func serverDevOpsAuditingSettings() *schema.Table {
 				Name:     "storage_account_access_key",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("StorageAccountAccessKey"),
+			},
+			{
+				Name:     "storage_account_subscription_id",
+				Type:     schema.TypeUUID,
+				Resolver: schema.PathResolver("StorageAccountSubscriptionID"),
 			},
 			{
 				Name:     "id",

@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/cloudquery/plugin-sdk/caser"
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
 	"github.com/gertd/go-pluralize"
@@ -80,6 +82,7 @@ type resourceDefinition struct {
 	mockGetFunctionArgs      []string
 	subServiceOverride       string
 	relations                []resourceDefinition
+	singleSubscription       bool
 }
 
 type byTemplates struct {
@@ -108,6 +111,9 @@ var (
 		Resolver: "client.ResolveAzureSubscription",
 	}
 	defaultSkipFields = []string{"Response", "SubscriptionID"}
+	azureCaser        = caser.New(caser.WithCustomInitialisms(map[string]bool{
+		"V2": true,
+	}))
 )
 
 func AllResources() []Resource {
@@ -160,12 +166,15 @@ func parseAzureStruct(serviceNameOverride string, definition resourceDefinition)
 
 func initColumns(table *codegen.TableDefinition, definition resourceDefinition) codegen.ColumnDefinitions {
 	columns := []codegen.ColumnDefinition{}
-	columns = append(columns, subscriptionIdColumn)
+	if !definition.singleSubscription {
+		// add subscription id if we are not in single subscription mode
+		columns = append(columns, subscriptionIdColumn)
+	}
 	if definition.parent != "" {
 		columns = append(columns, codegen.ColumnDefinition{
 			Name:     definition.parent,
-			Type:     schema.TypeUUID,
-			Resolver: "schema.ParentIDResolver",
+			Type:     schema.TypeString,
+			Resolver: `schema.ParentColumnResolver("id")`,
 		})
 	}
 
@@ -185,12 +194,16 @@ func getTableName(azureService, azureSubService string, override string) string 
 	if override != "" {
 		return fmt.Sprintf("%s_%s", pluginName, override)
 	}
-	return fmt.Sprintf("%s_%s_%s", pluginName, strings.ToLower(azureService), strcase.ToSnake(azureSubService))
+
+	return fmt.Sprintf("%s_%s_%s", pluginName, strings.ToLower(azureService), azureCaser.ToSnake(azureSubService))
 }
 
 func timeStampTransformer(field reflect.StructField) (schema.ValueType, error) {
+	dateTime := date.Time{}
 	uuid := uuid.UUID{}
 	switch field.Type {
+	case reflect.TypeOf(dateTime), reflect.TypeOf(&dateTime):
+		return schema.TypeTimestamp, nil
 	case reflect.TypeOf(uuid), reflect.TypeOf(&uuid):
 		return schema.TypeUUID, nil
 	}
@@ -203,10 +216,12 @@ func initTable(serviceNameOverride string, definition resourceDefinition, azureS
 		getTableName(azureService, azureSubService, definition.tableName),
 		definition.azureStruct,
 		codegen.WithSkipFields(skipFields),
-		codegen.WithUnwrapAllEmbeddedStructs(),                  // Unwrap all embedded structs otherwise all resources will just have `Id, Type, Name, Location, Tags` columns
-		codegen.WithUnwrapFieldsStructs([]string{"Properties"}), // Some resources have a `Properties` field which contains the actual resource properties instead of an embedded struct
+		codegen.WithUnwrapAllEmbeddedStructs(),                 // Unwrap all embedded structs otherwise all resources will just have `Id, Type, Name, Location, Tags` columns
+		codegen.WithUnwrapStructFields([]string{"Properties"}), // Some resources have a `Properties` field which contains the actual resource properties instead of an embedded struct
 		codegen.WithTypeTransformer(timeStampTransformer),
 	)
+	azureType := reflect.TypeOf(definition.azureStruct).Elem()
+	table.Description = fmt.Sprintf("https://pkg.go.dev/%s#%s", azureType.PkgPath(), azureType.Name())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -214,6 +229,10 @@ func initTable(serviceNameOverride string, definition resourceDefinition, azureS
 
 	if definition.parent == "" {
 		table.Multiplex = "client.SubscriptionMultiplex"
+	}
+
+	if definition.singleSubscription {
+		table.Multiplex = "client.SingleSubscriptionMultiplex"
 	}
 
 	if definition.includeColumns != "" {
@@ -280,7 +299,7 @@ func generateResources(resourcesByTemplates []byTemplates) []Resource {
 					Imports:          template.imports,
 					Template: Template{
 						Source:      template.source,
-						Destination: path.Join(strings.ToLower(azureService), strcase.ToSnake(azureSubService)+template.destinationSuffix),
+						Destination: path.Join(strings.ToLower(azureService), azureCaser.ToSnake(azureSubService)+template.destinationSuffix),
 					},
 					Helpers:                  definition.helpers,
 					ListFunction:             definition.listFunction,
@@ -316,7 +335,7 @@ func initParentsForResources(serviceNameOverride string, resources []resourceDef
 		relations := parent.relations
 		if relations != nil {
 			_, _, azureService, azureSubService := parseAzureStruct(serviceNameOverride, parent)
-			parentColumnName := fmt.Sprintf("%s_%s_id", strings.ToLower(azureService), strcase.ToSnake(plural.Singular(azureSubService)))
+			parentColumnName := fmt.Sprintf("%s_%s_id", strings.ToLower(azureService), azureCaser.ToSnake(plural.Singular(azureSubService)))
 			for j := range relations {
 				relations[j].parent = parentColumnName
 			}

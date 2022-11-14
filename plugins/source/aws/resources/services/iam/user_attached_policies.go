@@ -9,9 +9,10 @@ import (
 
 func UserAttachedPolicies() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_iam_user_attached_policies",
-		Resolver:  fetchIamUserAttachedPolicies,
-		Multiplex: client.AccountMultiplex,
+		Name:        "aws_iam_user_attached_policies",
+		Description: `https://docs.aws.amazon.com/IAM/latest/APIReference/API_AttachedPolicy.html`,
+		Resolver:    fetchIamUserAttachedPolicies,
+		Multiplex:   client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -21,12 +22,12 @@ func UserAttachedPolicies() *schema.Table {
 			{
 				Name:     "user_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "user_id",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("id"),
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "policy_arn",

@@ -9,9 +9,10 @@ import (
 
 func FunctionConcurrencyConfigs() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lambda_function_concurrency_configs",
-		Resolver:  fetchLambdaFunctionConcurrencyConfigs,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lambda"),
+		Name:        "aws_lambda_function_concurrency_configs",
+		Description: `https://docs.aws.amazon.com/lambda/latest/dg/API_ProvisionedConcurrencyConfigListItem.html`,
+		Resolver:    fetchLambdaFunctionConcurrencyConfigs,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("lambda"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func FunctionConcurrencyConfigs() *schema.Table {
 			{
 				Name:     "function_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "allocated_provisioned_concurrent_executions",

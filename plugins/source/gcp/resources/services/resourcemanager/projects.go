@@ -30,8 +30,8 @@ func Projects() *schema.Table {
 			},
 			{
 				Name:     "state",
-				Type:     schema.TypeInt,
-				Resolver: schema.PathResolver("State"),
+				Type:     schema.TypeString,
+				Resolver: client.ResolveProtoEnum("State"),
 			},
 			{
 				Name:     "display_name",
@@ -40,18 +40,18 @@ func Projects() *schema.Table {
 			},
 			{
 				Name:     "create_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("CreateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("CreateTime"),
 			},
 			{
 				Name:     "update_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("UpdateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("UpdateTime"),
 			},
 			{
 				Name:     "delete_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("DeleteTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("DeleteTime"),
 			},
 			{
 				Name:     "etag",

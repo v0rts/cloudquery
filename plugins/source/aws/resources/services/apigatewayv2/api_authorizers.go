@@ -9,9 +9,10 @@ import (
 
 func ApiAuthorizers() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_apigatewayv2_api_authorizers",
-		Resolver:  fetchApigatewayv2ApiAuthorizers,
-		Multiplex: client.ServiceAccountRegionMultiplexer("apigateway"),
+		Name:        "aws_apigatewayv2_api_authorizers",
+		Description: `https://docs.aws.amazon.com/apigateway/latest/api/API_Authorizer.html`,
+		Resolver:    fetchApigatewayv2ApiAuthorizers,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("apigateway"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,12 +27,12 @@ func ApiAuthorizers() *schema.Table {
 			{
 				Name:     "api_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "api_id",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("id"),
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "arn",

@@ -9,9 +9,11 @@ import (
 func AthenaResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "data_catalogs",
-			Struct:     &types.DataCatalog{},
-			SkipFields: []string{},
+			SubService:          "data_catalogs",
+			Description:         "https://docs.aws.amazon.com/athena/latest/APIReference/API_DataCatalog.html",
+			Struct:              &types.DataCatalog{},
+			SkipFields:          []string{},
+			PreResourceResolver: "getDataCatalog",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -32,16 +34,17 @@ func AthenaResources() []*Resource {
 			},
 		},
 		{
-			SubService: "data_catalog_databases",
-			Struct:     &types.Database{},
-			SkipFields: []string{"Name"},
+			SubService:  "data_catalog_databases",
+			Struct:      &types.Database{},
+			Description: "https://docs.aws.amazon.com/athena/latest/APIReference/API_Database.html",
+			SkipFields:  []string{"Name"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "data_catalog_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
@@ -56,22 +59,23 @@ func AthenaResources() []*Resource {
 			},
 		},
 		{
-			SubService: "data_catalog_database_tables",
-			Struct:     &types.TableMetadata{},
-			SkipFields: []string{"Name"},
+			SubService:  "data_catalog_database_tables",
+			Struct:      &types.TableMetadata{},
+			Description: "https://docs.aws.amazon.com/athena/latest/APIReference/API_TableMetadata.html",
+			SkipFields:  []string{"Name"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "data_catalog_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("data_catalog_arn")`,
+						Resolver: `schema.ParentColumnResolver("data_catalog_arn")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
 						Name:     "data_catalog_database_name",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("name")`,
+						Resolver: `schema.ParentColumnResolver("name")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
@@ -83,9 +87,11 @@ func AthenaResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "work_groups",
-			Struct:     &types.WorkGroup{},
-			SkipFields: []string{},
+			SubService:          "work_groups",
+			Description:         "https://docs.aws.amazon.com/athena/latest/APIReference/API_WorkGroup.html",
+			Struct:              &types.WorkGroup{},
+			SkipFields:          []string{},
+			PreResourceResolver: "getWorkGroup",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -108,44 +114,50 @@ func AthenaResources() []*Resource {
 			},
 		},
 		{
-			SubService: "work_group_prepared_statements",
-			Struct:     &types.PreparedStatement{},
-			SkipFields: []string{},
+			SubService:          "work_group_prepared_statements",
+			Struct:              &types.PreparedStatement{},
+			Description:         "https://docs.aws.amazon.com/athena/latest/APIReference/API_PreparedStatement.html",
+			PreResourceResolver: "getWorkGroupPreparedStatement",
+			SkipFields:          []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "work_group_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "work_group_query_executions",
-			Struct:     &types.QueryExecution{},
-			SkipFields: []string{},
+			SubService:          "work_group_query_executions",
+			Struct:              &types.QueryExecution{},
+			Description:         "https://docs.aws.amazon.com/athena/latest/APIReference/API_QueryExecution.html",
+			PreResourceResolver: "getWorkGroupQueryExecution",
+			SkipFields:          []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "work_group_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "work_group_named_queries",
-			Struct:     &types.NamedQuery{},
-			SkipFields: []string{},
+			SubService:          "work_group_named_queries",
+			Struct:              &types.NamedQuery{},
+			Description:         "https://docs.aws.amazon.com/athena/latest/APIReference/API_NamedQuery.html",
+			PreResourceResolver: "getWorkGroupNamedQuery",
+			SkipFields:          []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "work_group_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},

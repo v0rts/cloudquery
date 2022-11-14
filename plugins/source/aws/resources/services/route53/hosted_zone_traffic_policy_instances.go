@@ -9,9 +9,10 @@ import (
 
 func HostedZoneTrafficPolicyInstances() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_route53_hosted_zone_traffic_policy_instances",
-		Resolver:  fetchRoute53HostedZoneTrafficPolicyInstances,
-		Multiplex: client.AccountMultiplex,
+		Name:        "aws_route53_hosted_zone_traffic_policy_instances",
+		Description: `https://docs.aws.amazon.com/Route53/latest/APIReference/API_TrafficPolicyInstance.html`,
+		Resolver:    fetchRoute53HostedZoneTrafficPolicyInstances,
+		Multiplex:   client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -27,7 +28,7 @@ func HostedZoneTrafficPolicyInstances() *schema.Table {
 			{
 				Name:     "hosted_zone_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "hosted_zone_id",

@@ -64,7 +64,7 @@ func (c *Client) WithSpacesRegion(region string) *Client {
 	}
 }
 
-func (SpacesEndpointResolver) ResolveEndpoint(_, region string) (aws.Endpoint, error) {
+func (SpacesEndpointResolver) ResolveEndpoint(_, region string, options ...interface{}) (aws.Endpoint, error) {
 	return aws.Endpoint{
 		URL:    fmt.Sprintf("https://%s.digitaloceanspaces.com", region),
 		Source: aws.EndpointSourceCustom,
@@ -158,7 +158,7 @@ func New(ctx context.Context, logger zerolog.Logger, s specs.Source) (schema.Cli
 
 	awsCfg, err := awscfg.LoadDefaultConfig(context.Background(),
 		awscfg.WithCredentialsProvider(SpacesCredentialsProvider{doSpec.SpacesAccessKey, doSpec.SpacesAccessKeyId}),
-		awscfg.WithEndpointResolver(SpacesEndpointResolver{}),
+		awscfg.WithEndpointResolverWithOptions(SpacesEndpointResolver{}),
 	)
 
 	if err != nil {
@@ -197,6 +197,10 @@ func (a DoLogger) Logf(classification logging.Classification, format string, v .
 
 func (c *Client) Logger() *zerolog.Logger {
 	return &c.logger
+}
+
+func (c *Client) ID() string {
+	return c.SpacesRegion
 }
 
 func initServices(doClient *godo.Client, spacesService SpacesService) *Services {

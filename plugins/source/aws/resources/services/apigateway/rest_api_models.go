@@ -9,9 +9,10 @@ import (
 
 func RestApiModels() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_apigateway_rest_api_models",
-		Resolver:  fetchApigatewayRestApiModels,
-		Multiplex: client.ServiceAccountRegionMultiplexer("apigateway"),
+		Name:        "aws_apigateway_rest_api_models",
+		Description: `https://docs.aws.amazon.com/apigateway/latest/api/API_Model.html`,
+		Resolver:    fetchApigatewayRestApiModels,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("apigateway"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func RestApiModels() *schema.Table {
 			{
 				Name:     "rest_api_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "arn",

@@ -9,9 +9,10 @@ import (
 
 func Clusters() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_redshift_clusters",
-		Resolver:  fetchRedshiftClusters,
-		Multiplex: client.ServiceAccountRegionMultiplexer("redshift"),
+		Name:        "aws_redshift_clusters",
+		Description: `https://docs.aws.amazon.com/redshift/latest/APIReference/API_Cluster.html`,
+		Resolver:    fetchRedshiftClusters,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("redshift"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -31,12 +32,6 @@ func Clusters() *schema.Table {
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
-			},
-			{
-				Name:        "tags",
-				Type:        schema.TypeJSON,
-				Resolver:    client.ResolveTags,
-				Description: `The list of tags for the cluster.`,
 			},
 			{
 				Name:        "logging_status",
@@ -93,11 +88,6 @@ func Clusters() *schema.Table {
 				Name:     "cluster_nodes",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("ClusterNodes"),
-			},
-			{
-				Name:     "cluster_parameter_groups",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("ClusterParameterGroups"),
 			},
 			{
 				Name:     "cluster_public_key",
@@ -285,6 +275,11 @@ func Clusters() *schema.Table {
 				Resolver: schema.PathResolver("SnapshotScheduleState"),
 			},
 			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
+			},
+			{
 				Name:     "total_storage_capacity_in_mega_bytes",
 				Type:     schema.TypeInt,
 				Resolver: schema.PathResolver("TotalStorageCapacityInMegaBytes"),
@@ -303,6 +298,7 @@ func Clusters() *schema.Table {
 
 		Relations: []*schema.Table{
 			Snapshots(),
+			ClusterParameterGroups(),
 		},
 	}
 }

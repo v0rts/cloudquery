@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing/types"
-	elbv1Service "github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/elbv1"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/elbv1/models"
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
@@ -13,9 +13,10 @@ import (
 func ELBv1Resources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "load_balancers",
-			Struct:     &elbv1Service.ELBv1LoadBalancerWrapper{},
-			SkipFields: []string{},
+			SubService:  "load_balancers",
+			Struct:      &models.ELBv1LoadBalancerWrapper{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/2012-06-01/APIReference/API_LoadBalancerDescription.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -32,21 +33,22 @@ func ELBv1Resources() []*Resource {
 			},
 		},
 		{
-			SubService: "load_balancer_policies",
-			Struct:     &types.PolicyDescription{},
-			SkipFields: []string{"PolicyAttributeDescriptions"},
+			SubService:  "load_balancer_policies",
+			Struct:      &types.PolicyDescription{},
+			Description: "https://docs.aws.amazon.com/elasticloadbalancing/2012-06-01/APIReference/API_PolicyDescription.html",
+			SkipFields:  []string{"PolicyAttributeDescriptions"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "load_balancer_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "load_balancer_name",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("load_balancer_name")`,
+						Resolver: `schema.ParentColumnResolver("load_balancer_name")`,
 					},
 					{
 						Name:     "policy_attribute_descriptions",

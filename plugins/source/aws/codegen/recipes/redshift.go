@@ -10,9 +10,10 @@ func RedshiftResources() []*Resource {
 	resources := []*Resource{
 
 		{
-			SubService: "clusters",
-			Struct:     &types.Cluster{},
-			SkipFields: []string{"Tags"},
+			SubService:  "clusters",
+			Struct:      &types.Cluster{},
+			Description: "https://docs.aws.amazon.com/redshift/latest/APIReference/API_Cluster.html",
+			SkipFields:  []string{"ClusterParameterGroups"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -24,12 +25,6 @@ func RedshiftResources() []*Resource {
 						Options:     schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
-						Name:        "tags",
-						Description: "The list of tags for the cluster.",
-						Type:        schema.TypeJSON,
-						Resolver:    `client.ResolveTags`,
-					},
-					{
 						Name:        "logging_status",
 						Description: "Describes the status of logging for a cluster.",
 						Type:        schema.TypeJSON,
@@ -38,13 +33,63 @@ func RedshiftResources() []*Resource {
 				}...),
 			Relations: []string{
 				"Snapshots()",
+				"ClusterParameterGroups()",
 			},
+		},
+		{
+			SubService:  "cluster_parameter_groups",
+			Struct:      &types.ClusterParameterGroupStatus{},
+			Description: "https://docs.aws.amazon.com/redshift/latest/APIReference/API_ClusterParameterGroupStatus.html",
+			SkipFields:  []string{"ParameterGroupName"},
+			ExtraColumns: append(
+				defaultRegionalColumns,
+				[]codegen.ColumnDefinition{
+					{
+						Name:        "cluster_arn",
+						Description: "The Amazon Resource Name (ARN) for the resource.",
+						Type:        schema.TypeString,
+						Resolver:    `schema.ParentColumnResolver("arn")`,
+						Options:     schema.ColumnCreationOptions{PrimaryKey: true},
+					},
+					{
+						Name:     "parameter_group_name",
+						Type:     schema.TypeString,
+						Resolver: `schema.PathResolver("ParameterGroupName")`,
+						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
+					},
+				}...),
+			Relations: []string{
+				"ClusterParameters()",
+			},
+		},
+		{
+			SubService:  "cluster_parameters",
+			Struct:      &types.Parameter{},
+			Description: "https://docs.aws.amazon.com/redshift/latest/APIReference/API_Parameter.html",
+			SkipFields:  []string{"ParameterName"},
+			ExtraColumns: append(
+				defaultRegionalColumns,
+				[]codegen.ColumnDefinition{
+					{
+						Name:        "cluster_arn",
+						Description: "The Amazon Resource Name (ARN) for the resource.",
+						Type:        schema.TypeString,
+						Resolver:    `schema.ParentColumnResolver("cluster_arn")`,
+						Options:     schema.ColumnCreationOptions{PrimaryKey: true},
+					},
+					{
+						Name:     "parameter_name",
+						Type:     schema.TypeString,
+						Resolver: `schema.PathResolver("ParameterName")`,
+						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
+					},
+				}...),
 		},
 
 		{
-			SubService: "event_subscriptions",
-			Struct:     &types.EventSubscription{},
-			SkipFields: []string{"Tags"},
+			SubService:  "event_subscriptions",
+			Struct:      &types.EventSubscription{},
+			Description: "https://docs.aws.amazon.com/redshift/latest/APIReference/API_EventSubscription.html",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -55,19 +100,14 @@ func RedshiftResources() []*Resource {
 						Resolver:    `resolveEventSubscriptionARN`,
 						Options:     schema.ColumnCreationOptions{PrimaryKey: true},
 					},
-					{
-						Name:        "tags",
-						Description: "Tags",
-						Type:        schema.TypeJSON,
-						Resolver:    `client.ResolveTags`,
-					},
 				}...),
 		},
 
 		{
-			SubService: "snapshots",
-			Struct:     &types.Snapshot{},
-			SkipFields: []string{"Tags"},
+			SubService:  "snapshots",
+			Struct:      &types.Snapshot{},
+			Description: "https://docs.aws.amazon.com/redshift/latest/APIReference/API_Snapshot.html",
+			SkipFields:  []string{"Tags"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -88,9 +128,9 @@ func RedshiftResources() []*Resource {
 		},
 
 		{
-			SubService: "subnet_groups",
-			Struct:     &types.ClusterSubnetGroup{},
-			SkipFields: []string{"Tags"},
+			SubService:  "subnet_groups",
+			Struct:      &types.ClusterSubnetGroup{},
+			Description: "https://docs.aws.amazon.com/redshift/latest/APIReference/API_ClusterSubnetGroup.html",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -100,12 +140,6 @@ func RedshiftResources() []*Resource {
 						Type:        schema.TypeString,
 						Resolver:    `resolveSubnetGroupArn()`,
 						Options:     schema.ColumnCreationOptions{PrimaryKey: true},
-					},
-					{
-						Name:        "tags",
-						Description: "The list of tags for the cluster subnet group.",
-						Type:        schema.TypeJSON,
-						Resolver:    `client.ResolveTags`,
 					},
 				}...),
 		},

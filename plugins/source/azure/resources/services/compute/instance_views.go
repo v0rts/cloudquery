@@ -13,8 +13,9 @@ import (
 
 func instanceViews() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_compute_instance_views",
-		Resolver: fetchComputeInstanceViews,
+		Name:        "azure_compute_instance_views",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-03-01/compute#VirtualMachineInstanceView`,
+		Resolver:    fetchComputeInstanceViews,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func instanceViews() *schema.Table {
 			},
 			{
 				Name:     "compute_virtual_machine_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "platform_update_domain",

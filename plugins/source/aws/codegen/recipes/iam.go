@@ -6,7 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
-	iamService "github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/iam"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/iam/models"
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
@@ -15,7 +15,7 @@ func IAMResources() []*Resource {
 	resources := []*Resource{
 		{
 			SubService: "accounts",
-			Struct:     &iamService.Account{},
+			Struct:     &models.Account{},
 			SkipFields: []string{},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
@@ -28,7 +28,7 @@ func IAMResources() []*Resource {
 		},
 		{
 			SubService: "credential_reports",
-			Struct:     &iamService.CredentialReportEntry{},
+			Struct:     &models.CredentialReportEntry{},
 			SkipFields: []string{
 				"Arn",
 				"UserCreationTime",
@@ -104,9 +104,10 @@ func IAMResources() []*Resource {
 			Relations: []string{},
 		},
 		{
-			SubService: "groups",
-			Struct:     &types.Group{},
-			SkipFields: []string{"GroupId"},
+			SubService:  "groups",
+			Struct:      &types.Group{},
+			Description: "https://docs.aws.amazon.com/IAM/latest/APIReference/API_Group.html",
+			SkipFields:  []string{"GroupId"},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -129,21 +130,22 @@ func IAMResources() []*Resource {
 			Relations: []string{"GroupPolicies()"},
 		},
 		{
-			SubService: "group_policies",
-			Struct:     &iam.GetGroupPolicyOutput{},
-			SkipFields: []string{"PolicyDocument"},
+			SubService:          "group_policies",
+			Struct:              &iam.GetGroupPolicyOutput{},
+			SkipFields:          []string{"PolicyDocument"},
+			PreResourceResolver: "getGroupPolicy",
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "group_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "group_id",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("id")`,
+						Resolver: `schema.ParentColumnResolver("id")`,
 					},
 					{
 						Name:     "policy_document",
@@ -153,9 +155,10 @@ func IAMResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "openid_connect_identity_providers",
-			Struct:     &types.OpenIDConnectProviderListEntry{},
-			SkipFields: []string{"Arn", "Tags"},
+			SubService:          "openid_connect_identity_providers",
+			Struct:              &models.IamOpenIdIdentityProviderWrapper{},
+			SkipFields:          []string{"Arn"},
+			PreResourceResolver: "getOpenIdConnectIdentityProvider",
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
@@ -164,16 +167,11 @@ func IAMResources() []*Resource {
 						Type:    schema.TypeString,
 						Options: schema.ColumnCreationOptions{PrimaryKey: true},
 					},
-					{
-						Name:     "tags",
-						Type:     schema.TypeJSON,
-						Resolver: `client.ResolveTags`,
-					},
 				}...),
 		},
 		{
 			SubService: "password_policies",
-			Struct:     &iamService.PasswordPolicyWrapper{},
+			Struct:     &models.PasswordPolicyWrapper{},
 			SkipFields: []string{},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
@@ -185,9 +183,10 @@ func IAMResources() []*Resource {
 			},
 		},
 		{
-			SubService: "policies",
-			Struct:     &types.Policy{},
-			SkipFields: []string{"PolicyId", "Tags"},
+			SubService:  "policies",
+			Struct:      &types.ManagedPolicyDetail{},
+			Description: "https://docs.aws.amazon.com/IAM/latest/APIReference/API_ManagedPolicyDetail.html",
+			SkipFields:  []string{"PolicyId", "Tags", "PolicyVersionList"},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -206,12 +205,19 @@ func IAMResources() []*Resource {
 					Type:     schema.TypeJSON,
 					Resolver: `resolveIamPolicyTags`,
 				},
+				{
+					Name:     "policy_version_list",
+					Type:     schema.TypeJSON,
+					Resolver: `resolveIamPolicyVersionList`,
+				},
 			},
 		},
 		{
-			SubService: "roles",
-			Struct:     &types.Role{},
-			SkipFields: []string{"RoleId", "Tags", "AssumeRolePolicyDocument"},
+			SubService:          "roles",
+			Struct:              &types.Role{},
+			Description:         "https://docs.aws.amazon.com/IAM/latest/APIReference/API_Role.html",
+			SkipFields:          []string{"RoleId", "AssumeRolePolicyDocument"},
+			PreResourceResolver: "getRole",
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -235,27 +241,23 @@ func IAMResources() []*Resource {
 					Type:     schema.TypeJSON,
 					Resolver: `resolveRolesAssumeRolePolicyDocument`,
 				},
-				{
-					Name:     "tags",
-					Type:     schema.TypeJSON,
-					Resolver: `client.ResolveTags`,
-				},
 			},
 			Relations: []string{
 				"RolePolicies()",
 			},
 		},
 		{
-			SubService: "role_policies",
-			Struct:     &iam.GetRolePolicyOutput{},
-			SkipFields: []string{"PolicyDocument"},
+			SubService:          "role_policies",
+			Struct:              &iam.GetRolePolicyOutput{},
+			SkipFields:          []string{"PolicyDocument"},
+			PreResourceResolver: "getRolePolicy",
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "role_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "policy_document",
@@ -265,9 +267,11 @@ func IAMResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "saml_identity_providers",
-			Struct:     &types.SAMLProviderListEntry{},
-			SkipFields: []string{"Arn", "Tags"},
+			SubService:          "saml_identity_providers",
+			Struct:              &types.SAMLProviderListEntry{},
+			Description:         "https://docs.aws.amazon.com/IAM/latest/APIReference/API_SAMLProviderListEntry.html",
+			SkipFields:          []string{"Arn"},
+			PreResourceResolver: "getSamlIdentityProvider",
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
@@ -276,17 +280,13 @@ func IAMResources() []*Resource {
 						Type:    schema.TypeString,
 						Options: schema.ColumnCreationOptions{PrimaryKey: true},
 					},
-					{
-						Name:     "tags",
-						Type:     schema.TypeJSON,
-						Resolver: `client.ResolveTags`,
-					},
 				}...),
 		},
 		{
-			SubService: "server_certificates",
-			Struct:     &types.ServerCertificateMetadata{},
-			SkipFields: []string{"ServerCertificateId"},
+			SubService:  "server_certificates",
+			Struct:      &types.ServerCertificateMetadata{},
+			Description: "https://docs.aws.amazon.com/IAM/latest/APIReference/API_ServerCertificateMetadata.html",
+			SkipFields:  []string{"ServerCertificateId"},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -303,9 +303,11 @@ func IAMResources() []*Resource {
 			},
 		},
 		{
-			SubService: "users",
-			Struct:     &types.User{},
-			SkipFields: []string{"Arn", "AccountId", "UserId", "Tags"},
+			SubService:          "users",
+			Struct:              &types.User{},
+			Description:         "https://docs.aws.amazon.com/IAM/latest/APIReference/API_User.html",
+			SkipFields:          []string{"Arn", "AccountId", "UserId"},
+			PreResourceResolver: "getUser",
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "arn",
@@ -324,11 +326,6 @@ func IAMResources() []*Resource {
 					Resolver: `client.ResolveAWSAccount`,
 					Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 				},
-				{
-					Name:     "tags",
-					Type:     schema.TypeJSON,
-					Resolver: `client.ResolveTags`,
-				},
 			},
 			Relations: []string{
 				"UserAccessKeys()",
@@ -339,7 +336,7 @@ func IAMResources() []*Resource {
 		},
 		{
 			SubService:           "user_access_keys",
-			Struct:               &iamService.AccessKeyWrapper{},
+			Struct:               &models.AccessKeyWrapper{},
 			SkipFields:           []string{},
 			PostResourceResolver: `postIamUserAccessKeyResolver`,
 			ExtraColumns: append(
@@ -348,12 +345,12 @@ func IAMResources() []*Resource {
 					{
 						Name:     "user_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "user_id",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("id")`,
+						Resolver: `schema.ParentColumnResolver("id")`,
 					},
 					{
 						Name: "last_used",
@@ -366,59 +363,62 @@ func IAMResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "user_groups",
-			Struct:     &types.Group{},
-			SkipFields: []string{},
+			SubService:  "user_groups",
+			Struct:      &types.Group{},
+			Description: "https://docs.aws.amazon.com/IAM/latest/APIReference/API_Group.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "user_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "user_id",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("id")`,
+						Resolver: `schema.ParentColumnResolver("id")`,
 					},
 				}...),
 		},
 		{
-			SubService: "user_attached_policies",
-			Struct:     &types.AttachedPolicy{},
-			SkipFields: []string{},
+			SubService:  "user_attached_policies",
+			Struct:      &types.AttachedPolicy{},
+			Description: "https://docs.aws.amazon.com/IAM/latest/APIReference/API_AttachedPolicy.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "user_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "user_id",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("id")`,
+						Resolver: `schema.ParentColumnResolver("id")`,
 					},
 				}...),
 		},
 		{
-			SubService: "user_policies",
-			Struct:     &iam.GetUserPolicyOutput{},
-			SkipFields: []string{"PolicyDocument"},
+			SubService:          "user_policies",
+			Struct:              &iam.GetUserPolicyOutput{},
+			SkipFields:          []string{"PolicyDocument"},
+			PreResourceResolver: "getUserPolicy",
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "user_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "user_id",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("id")`,
+						Resolver: `schema.ParentColumnResolver("id")`,
 					},
 					{
 						Name:     "policy_document",
@@ -428,9 +428,10 @@ func IAMResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "virtual_mfa_devices",
-			Struct:     &types.VirtualMFADevice{},
-			SkipFields: []string{"SerialNumber", "Tags", "UserTags"},
+			SubService:  "virtual_mfa_devices",
+			Struct:      &types.VirtualMFADevice{},
+			Description: "https://docs.aws.amazon.com/IAM/latest/APIReference/API_VirtualMFADevice.html",
+			SkipFields:  []string{"SerialNumber"},
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
@@ -438,16 +439,6 @@ func IAMResources() []*Resource {
 						Name:    "serial_number",
 						Type:    schema.TypeString,
 						Options: schema.ColumnCreationOptions{PrimaryKey: true},
-					},
-					{
-						Name:     "tags",
-						Type:     schema.TypeJSON,
-						Resolver: `client.ResolveTags`,
-					},
-					{
-						Name:     "user_tags",
-						Type:     schema.TypeJSON,
-						Resolver: `client.ResolveTags`,
 					},
 				}...),
 		},

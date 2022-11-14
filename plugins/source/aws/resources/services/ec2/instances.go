@@ -9,9 +9,10 @@ import (
 
 func Instances() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ec2_instances",
-		Resolver:  fetchEc2Instances,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ec2"),
+		Name:        "aws_ec2_instances",
+		Description: `https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Instance.html`,
+		Resolver:    fetchEc2Instances,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("ec2"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -30,6 +31,12 @@ func Instances() *schema.Table {
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
+			},
+			{
+				Name:          "state_transition_reason_time",
+				Type:          schema.TypeTimestamp,
+				Resolver:      resolveEc2InstanceStateTransitionReasonTime,
+				IgnoreInTests: true,
 			},
 			{
 				Name:     "ami_launch_index",
@@ -132,7 +139,7 @@ func Instances() *schema.Table {
 				Resolver: schema.PathResolver("InstanceType"),
 			},
 			{
-				Name:     "ipv_6_address",
+				Name:     "ipv6_address",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("Ipv6Address"),
 			},
@@ -284,7 +291,7 @@ func Instances() *schema.Table {
 			{
 				Name:     "tags",
 				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("Tags"),
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "tpm_support",

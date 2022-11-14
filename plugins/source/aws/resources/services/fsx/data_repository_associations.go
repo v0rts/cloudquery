@@ -9,9 +9,10 @@ import (
 
 func DataRepositoryAssociations() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_fsx_data_repository_associations",
-		Resolver:  fetchFsxDataRepositoryAssociations,
-		Multiplex: client.ServiceAccountRegionMultiplexer("fsx"),
+		Name:        "aws_fsx_data_repository_associations",
+		Description: `https://docs.aws.amazon.com/fsx/latest/APIReference/API_DataRepositoryAssociation.html`,
+		Resolver:    fetchFsxDataRepositoryAssociations,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("fsx"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -30,11 +31,6 @@ func DataRepositoryAssociations() *schema.Table {
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
-			},
-			{
-				Name:     "tags",
-				Type:     schema.TypeJSON,
-				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "association_id",
@@ -57,9 +53,24 @@ func DataRepositoryAssociations() *schema.Table {
 				Resolver: schema.PathResolver("DataRepositoryPath"),
 			},
 			{
+				Name:     "data_repository_subdirectories",
+				Type:     schema.TypeStringArray,
+				Resolver: schema.PathResolver("DataRepositorySubdirectories"),
+			},
+			{
 				Name:     "failure_details",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("FailureDetails"),
+			},
+			{
+				Name:     "file_cache_id",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("FileCacheId"),
+			},
+			{
+				Name:     "file_cache_path",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("FileCachePath"),
 			},
 			{
 				Name:     "file_system_id",
@@ -82,9 +93,19 @@ func DataRepositoryAssociations() *schema.Table {
 				Resolver: schema.PathResolver("Lifecycle"),
 			},
 			{
-				Name:     "s_3",
+				Name:     "nfs",
+				Type:     schema.TypeJSON,
+				Resolver: schema.PathResolver("NFS"),
+			},
+			{
+				Name:     "s3",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("S3"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
 			},
 		},
 	}

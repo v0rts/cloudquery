@@ -1,12 +1,13 @@
 package recipes
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/s3"
-	"github.com/cloudquery/plugin-sdk/codegen"
-	"github.com/cloudquery/plugin-sdk/schema"
 	"reflect"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/s3/models"
+	"github.com/cloudquery/plugin-sdk/codegen"
+	"github.com/cloudquery/plugin-sdk/schema"
 )
 
 func S3Resources() []*Resource {
@@ -14,7 +15,7 @@ func S3Resources() []*Resource {
 
 		{
 			SubService: "accounts",
-			Struct:     &s3.PublicAccessBlockConfigurationWrapper{},
+			Struct:     &models.PublicAccessBlockConfigurationWrapper{},
 			SkipFields: []string{"ARN"},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
@@ -27,7 +28,7 @@ func S3Resources() []*Resource {
 		},
 		{
 			SubService: "buckets",
-			Struct:     &s3.WrappedBucket{},
+			Struct:     &models.WrappedBucket{},
 			SkipFields: []string{},
 			ExtraColumns: append(
 				defaultAccountColumns,
@@ -47,58 +48,62 @@ func S3Resources() []*Resource {
 			},
 		},
 		{
-			SubService: "bucket_encryption_rules",
-			Struct:     &types.ServerSideEncryptionRule{},
-			SkipFields: []string{},
+			SubService:  "bucket_encryption_rules",
+			Struct:      &types.ServerSideEncryptionRule{},
+			Description: "https://docs.aws.amazon.com/AmazonS3/latest/API/API_ServerSideEncryptionRule.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "bucket_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "bucket_lifecycles",
-			Struct:     &types.LifecycleRule{},
-			SkipFields: []string{"Filter"},
+			SubService:  "bucket_lifecycles",
+			Struct:      &types.LifecycleRule{},
+			Description: "https://docs.aws.amazon.com/AmazonS3/latest/API/API_LifecycleRule.html",
+			SkipFields:  []string{"Filter"},
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "bucket_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "bucket_grants",
-			Struct:     &types.Grant{},
-			SkipFields: []string{},
+			SubService:  "bucket_grants",
+			Struct:      &types.Grant{},
+			Description: "https://docs.aws.amazon.com/AmazonS3/latest/API/API_Grant.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "bucket_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "bucket_cors_rules",
-			Struct:     &types.CORSRule{},
-			SkipFields: []string{},
+			SubService:  "bucket_cors_rules",
+			Struct:      &types.CORSRule{},
+			Description: "https://docs.aws.amazon.com/AmazonS3/latest/API/API_CORSRule.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultAccountColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "bucket_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},

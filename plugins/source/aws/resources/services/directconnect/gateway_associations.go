@@ -9,9 +9,10 @@ import (
 
 func GatewayAssociations() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_directconnect_gateway_associations",
-		Resolver:  fetchDirectconnectGatewayAssociations,
-		Multiplex: client.ServiceAccountRegionMultiplexer("directconnect"),
+		Name:        "aws_directconnect_gateway_associations",
+		Description: `https://docs.aws.amazon.com/directconnect/latest/APIReference/API_DirectConnectGatewayAssociation.html`,
+		Resolver:    fetchDirectconnectGatewayAssociations,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("directconnect"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,12 +27,12 @@ func GatewayAssociations() *schema.Table {
 			{
 				Name:     "gateway_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "gateway_id",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("id"),
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "allowed_prefixes_to_direct_connect_gateway",

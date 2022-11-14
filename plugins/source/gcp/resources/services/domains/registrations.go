@@ -38,18 +38,18 @@ func Registrations() *schema.Table {
 			},
 			{
 				Name:     "create_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("CreateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("CreateTime"),
 			},
 			{
 				Name:     "expire_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("ExpireTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("ExpireTime"),
 			},
 			{
 				Name:     "state",
-				Type:     schema.TypeInt,
-				Resolver: schema.PathResolver("State"),
+				Type:     schema.TypeString,
+				Resolver: client.ResolveProtoEnum("State"),
 			},
 			{
 				Name:     "issues",

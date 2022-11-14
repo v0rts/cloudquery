@@ -9,9 +9,10 @@ import (
 
 func LayerVersions() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lambda_layer_versions",
-		Resolver:  fetchLambdaLayerVersions,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lambda"),
+		Name:        "aws_lambda_layer_versions",
+		Description: `https://docs.aws.amazon.com/lambda/latest/dg/API_LayerVersionsListItem.html`,
+		Resolver:    fetchLambdaLayerVersions,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("lambda"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -31,7 +32,7 @@ func LayerVersions() *schema.Table {
 			{
 				Name:     "layer_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "compatible_architectures",

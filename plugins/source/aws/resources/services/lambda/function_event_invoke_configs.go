@@ -9,9 +9,10 @@ import (
 
 func FunctionEventInvokeConfigs() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lambda_function_event_invoke_configs",
-		Resolver:  fetchLambdaFunctionEventInvokeConfigs,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lambda"),
+		Name:        "aws_lambda_function_event_invoke_configs",
+		Description: `https://docs.aws.amazon.com/lambda/latest/dg/API_FunctionEventInvokeConfig.html`,
+		Resolver:    fetchLambdaFunctionEventInvokeConfigs,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("lambda"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func FunctionEventInvokeConfigs() *schema.Table {
 			{
 				Name:     "function_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "destination_config",

@@ -9,9 +9,10 @@ import (
 
 func GroupScalingPolicies() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_autoscaling_group_scaling_policies",
-		Resolver:  fetchAutoscalingGroupScalingPolicies,
-		Multiplex: client.ServiceAccountRegionMultiplexer("autoscaling"),
+		Name:        "aws_autoscaling_group_scaling_policies",
+		Description: `https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_ScalingPolicy.html`,
+		Resolver:    fetchAutoscalingGroupScalingPolicies,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("autoscaling"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,15 @@ func GroupScalingPolicies() *schema.Table {
 			{
 				Name:     "group_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
+			},
+			{
+				Name:     "arn",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("PolicyARN"),
+				CreationOptions: schema.ColumnCreationOptions{
+					PrimaryKey: true,
+				},
 			},
 			{
 				Name:     "adjustment_type",
@@ -72,11 +81,6 @@ func GroupScalingPolicies() *schema.Table {
 				Name:     "min_adjustment_step",
 				Type:     schema.TypeInt,
 				Resolver: schema.PathResolver("MinAdjustmentStep"),
-			},
-			{
-				Name:     "policy_arn",
-				Type:     schema.TypeString,
-				Resolver: schema.PathResolver("PolicyARN"),
 			},
 			{
 				Name:     "policy_name",

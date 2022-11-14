@@ -9,9 +9,10 @@ import (
 
 func GroupPolicies() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_iam_group_policies",
-		Resolver:  fetchIamGroupPolicies,
-		Multiplex: client.AccountMultiplex,
+		Name:                "aws_iam_group_policies",
+		Resolver:            fetchIamGroupPolicies,
+		PreResourceResolver: getGroupPolicy,
+		Multiplex:           client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -21,12 +22,12 @@ func GroupPolicies() *schema.Table {
 			{
 				Name:     "group_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "group_id",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("id"),
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "policy_document",

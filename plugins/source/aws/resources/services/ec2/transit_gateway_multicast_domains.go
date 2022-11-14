@@ -9,9 +9,10 @@ import (
 
 func TransitGatewayMulticastDomains() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ec2_transit_gateway_multicast_domains",
-		Resolver:  fetchEc2TransitGatewayMulticastDomains,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ec2"),
+		Name:        "aws_ec2_transit_gateway_multicast_domains",
+		Description: `https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_TransitGatewayMulticastDomain.html`,
+		Resolver:    fetchEc2TransitGatewayMulticastDomains,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("ec2"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,12 +27,7 @@ func TransitGatewayMulticastDomains() *schema.Table {
 			{
 				Name:     "transit_gateway_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
-			},
-			{
-				Name:     "tags",
-				Type:     schema.TypeJSON,
-				Resolver: client.ResolveTags,
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "creation_time",
@@ -52,6 +48,11 @@ func TransitGatewayMulticastDomains() *schema.Table {
 				Name:     "state",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("State"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "transit_gateway_id",

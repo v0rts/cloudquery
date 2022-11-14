@@ -9,9 +9,10 @@ import (
 
 func OpenidConnectIdentityProviders() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_iam_openid_connect_identity_providers",
-		Resolver:  fetchIamOpenidConnectIdentityProviders,
-		Multiplex: client.AccountMultiplex,
+		Name:                "aws_iam_openid_connect_identity_providers",
+		Resolver:            fetchIamOpenidConnectIdentityProviders,
+		PreResourceResolver: getOpenIdConnectIdentityProvider,
+		Multiplex:           client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,9 +27,34 @@ func OpenidConnectIdentityProviders() *schema.Table {
 				},
 			},
 			{
+				Name:     "client_id_list",
+				Type:     schema.TypeStringArray,
+				Resolver: schema.PathResolver("ClientIDList"),
+			},
+			{
+				Name:     "create_date",
+				Type:     schema.TypeTimestamp,
+				Resolver: schema.PathResolver("CreateDate"),
+			},
+			{
 				Name:     "tags",
 				Type:     schema.TypeJSON,
 				Resolver: client.ResolveTags,
+			},
+			{
+				Name:     "thumbprint_list",
+				Type:     schema.TypeStringArray,
+				Resolver: schema.PathResolver("ThumbprintList"),
+			},
+			{
+				Name:     "url",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("Url"),
+			},
+			{
+				Name:     "result_metadata",
+				Type:     schema.TypeJSON,
+				Resolver: schema.PathResolver("ResultMetadata"),
 			},
 		},
 	}

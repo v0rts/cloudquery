@@ -3,16 +3,19 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 
+	resourcemanagerv3 "cloud.google.com/go/resourcemanager/apiv3"
+	"cloud.google.com/go/resourcemanager/apiv3/resourcemanagerpb"
 	"github.com/cloudquery/plugin-sdk/schema"
 	"github.com/cloudquery/plugin-sdk/specs"
 	"github.com/rs/zerolog"
 	crmv1 "google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
+
+const maxProjectIdsToLog int = 100
 
 type Client struct {
 	// plugin   *plugins.SourcePlugin
@@ -25,30 +28,27 @@ type Client struct {
 	logger zerolog.Logger
 }
 
-const (
-	serviceAccountEnvKey = "CQ_SERVICE_ACCOUNT_KEY_JSON"
-)
-
 //revive:disable:modifies-value-receiver
 
 // withProject allows multiplexer to create a new client with given subscriptionId
-func (c Client) withProject(project string) *Client {
-	c.logger = c.logger.With().Str("project_id", project).Logger()
-	c.ProjectId = project
-	return &c
+func (c *Client) withProject(project string) *Client {
+	newClient := *c
+	newClient.logger = c.logger.With().Str("project_id", project).Logger()
+	newClient.ProjectId = project
+	return &newClient
 }
 
 func isValidJson(content []byte) error {
 	var v map[string]interface{}
 	err := json.Unmarshal(content, &v)
 	if err != nil {
-		var syntaxError *json.SyntaxError
-		if errors.As(err, &syntaxError) {
-			return fmt.Errorf("the environment variable %s should contain valid JSON object. %w", serviceAccountEnvKey, err)
-		}
 		return err
 	}
 	return nil
+}
+
+func (c *Client) ID() string {
+	return c.ProjectId
 }
 
 func (c *Client) Logger() *zerolog.Logger {
@@ -56,6 +56,8 @@ func (c *Client) Logger() *zerolog.Logger {
 }
 
 func New(ctx context.Context, logger zerolog.Logger, s specs.Source) (schema.ClientMeta, error) {
+	var err error
+
 	c := Client{
 		logger: logger,
 		// plugin: p,
@@ -66,38 +68,74 @@ func New(ctx context.Context, logger zerolog.Logger, s specs.Source) (schema.Cli
 		return nil, fmt.Errorf("failed to unmarshal gcp spec: %w", err)
 	}
 
+	gcpSpec.setDefaults()
+
 	projects := gcpSpec.ProjectIDs
 
 	serviceAccountKeyJSON := []byte(gcpSpec.ServiceAccountKeyJSON)
-	if len(serviceAccountKeyJSON) == 0 {
-		serviceAccountKeyJSON = []byte(os.Getenv(serviceAccountEnvKey))
-	}
 
 	// Add a fake request reason because it is not possible to pass nil options
 	options := []option.ClientOption{option.WithRequestReason("cloudquery resource fetch")}
 	if len(serviceAccountKeyJSON) != 0 {
 		if err := isValidJson(serviceAccountKeyJSON); err != nil {
-			return nil, fmt.Errorf("invalid service account key JSON: %w", err)
+			return nil, fmt.Errorf("invalid json at service_account_key_json: %w", err)
 		}
 		options = append(options, option.WithCredentialsJSON(serviceAccountKeyJSON))
 	}
 
-	var err error
 	c.Services, err = initServices(context.Background(), options)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(projects) == 0 {
-		c.logger.Info().Msg("No project_ids specified, assuming all active projects")
-		var err error
+	if len(gcpSpec.ProjectFilter) > 0 && len(gcpSpec.FolderIDs) > 0 {
+		return nil, fmt.Errorf("project_filter and folder_ids are mutually exclusive")
+	}
+
+	switch {
+	case len(projects) == 0 && len(gcpSpec.FolderIDs) == 0 && len(gcpSpec.ProjectFilter) == 0:
+		c.logger.Info().Msg("No project_ids, folder_ids, or project_filter specified - assuming all active projects")
 		projects, err = getProjectsV1(ctx, options...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get projects: %w", err)
 		}
+
+	case len(gcpSpec.FolderIDs) > 0:
+		var folderIds []string
+
+		for _, parentFolder := range gcpSpec.FolderIDs {
+			c.logger.Info().Msg("Listing folders...")
+			childFolders, err := listFolders(ctx, c.Services.ResourcemanagerFoldersClient, parentFolder, *gcpSpec.FolderRecursionDepth)
+			if err != nil {
+				return nil, fmt.Errorf("failed to list folders: %w", err)
+			}
+			folderIds = append(folderIds, childFolders...)
+		}
+
+		logFolderIds(&c.logger, folderIds)
+
+		c.logger.Info().Msg("listing folder projects...")
+		folderProjects, err := listProjectsInFolders(ctx, c.Services.ResourcemanagerProjectsClient, folderIds)
+		projects = setUnion(projects, folderProjects)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list projects: %w", err)
+		}
+
+	case len(gcpSpec.ProjectFilter) > 0:
+		c.logger.Info().Msg("Listing projects with filter...")
+		projectsWithFilter, err := getProjectsV1WithFilter(ctx, gcpSpec.ProjectFilter, options...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get projects with filter: %w", err)
+		}
+
+		projects = setUnion(projects, projectsWithFilter)
 	}
 
-	c.logger.Debug().Strs("projects", projects).Msg("Found projects")
+	logProjectIds(&logger, projects)
+
+	if len(projects) == 0 {
+		return nil, fmt.Errorf("no active projects")
+	}
 
 	c.projects = projects
 	if len(projects) == 1 {
@@ -105,6 +143,26 @@ func New(ctx context.Context, logger zerolog.Logger, s specs.Source) (schema.Cli
 	}
 
 	return &c, nil
+}
+
+func logFolderIds(logger *zerolog.Logger, folderIds []string) {
+	// If there are too many folders, just log the first maxProjectIdsToLog.
+	if len(folderIds) > maxProjectIdsToLog {
+		logger.Info().Interface("folder_ids", folderIds[:maxProjectIdsToLog]).Msgf("Found %d folders. First %d: ", len(folderIds), maxProjectIdsToLog)
+		logger.Debug().Interface("folder_ids", folderIds).Msg("All folders: ")
+	} else {
+		logger.Info().Interface("folder_ids", folderIds).Msgf("Found %d projects in folders", len(folderIds))
+	}
+}
+
+func logProjectIds(logger *zerolog.Logger, projectIds []string) {
+	// If there are too many folders, just log the first maxProjectIdsToLog.
+	if len(projectIds) > maxProjectIdsToLog {
+		logger.Info().Interface("projects", projectIds[:maxProjectIdsToLog]).Msgf("Found %d projects. First %d: ", len(projectIds), maxProjectIdsToLog)
+		logger.Debug().Interface("projects", projectIds).Msg("All projects: ")
+	} else {
+		logger.Info().Interface("projects", projectIds).Msgf("Found %d projects in folders", len(projectIds))
+	}
 }
 
 // getProjectsV1 requires the `resourcemanager.projects.get` permission to list projects
@@ -137,4 +195,111 @@ func getProjectsV1(ctx context.Context, options ...option.ClientOption) ([]strin
 	}
 
 	return projects, nil
+}
+
+func getProjectsV1WithFilter(ctx context.Context, filter string, options ...option.ClientOption) ([]string, error) {
+	var (
+		projects []string
+	)
+	service, err := crmv1.NewService(ctx, options...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cloudresourcemanager service: %w", err)
+	}
+
+	call := service.Projects.List().Filter(filter).Context(ctx)
+	for {
+		output, err := call.Do()
+		if err != nil {
+			return nil, err
+		}
+		for _, project := range output.Projects {
+			if project.LifecycleState == "ACTIVE" {
+				projects = append(projects, project.ProjectId)
+			}
+		}
+		if output.NextPageToken == "" {
+			break
+		}
+		call.PageToken(output.NextPageToken)
+	}
+
+	return projects, nil
+}
+
+// listFolders recursively lists the folders in the 'parent' folder. Includes the 'parent' folder itself.
+// recursionDepth is the depth of folders to recurse - where 0 means not to recurse any folders.
+func listFolders(ctx context.Context, folderClient *resourcemanagerv3.FoldersClient, parent string, recursionDepth int) ([]string, error) {
+	folders := []string{
+		parent,
+	}
+	if recursionDepth <= 0 {
+		return folders, nil
+	}
+
+	it := folderClient.ListFolders(ctx, &resourcemanagerpb.ListFoldersRequest{
+		Parent: parent,
+	})
+
+	for {
+		child, err := it.Next()
+
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		if child.State == resourcemanagerpb.Folder_ACTIVE {
+			childFolders, err := listFolders(ctx, folderClient, child.Name, recursionDepth-1)
+			if err != nil {
+				return nil, err
+			}
+			folders = append(folders, childFolders...)
+		}
+	}
+
+	return folders, nil
+}
+
+func listProjectsInFolders(ctx context.Context, projectClient *resourcemanagerv3.ProjectsClient, folders []string) ([]string, error) {
+	var projects []string
+	for _, folder := range folders {
+		it := projectClient.ListProjects(ctx, &resourcemanagerpb.ListProjectsRequest{
+			Parent: folder,
+		})
+
+		for {
+			project, err := it.Next()
+
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+
+			if project.State == resourcemanagerpb.Project_ACTIVE {
+				projects = append(projects, project.ProjectId)
+			}
+		}
+	}
+
+	return projects, nil
+}
+
+func setUnion(a []string, b []string) []string {
+	set := make(map[string]struct{}, len(a)+len(b)) // alloc max
+	for _, s := range a {
+		set[s] = struct{}{}
+	}
+	for _, s := range b {
+		set[s] = struct{}{}
+	}
+
+	union := make([]string, 0, len(set))
+	for s := range set {
+		union = append(union, s)
+	}
+	return union
 }

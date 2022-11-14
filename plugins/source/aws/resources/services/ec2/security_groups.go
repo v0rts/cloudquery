@@ -9,9 +9,10 @@ import (
 
 func SecurityGroups() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ec2_security_groups",
-		Resolver:  fetchEc2SecurityGroups,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ec2"),
+		Name:        "aws_ec2_security_groups",
+		Description: `https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_SecurityGroup.html`,
+		Resolver:    fetchEc2SecurityGroups,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("ec2"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -64,7 +65,7 @@ func SecurityGroups() *schema.Table {
 			{
 				Name:     "tags",
 				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("Tags"),
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "vpc_id",

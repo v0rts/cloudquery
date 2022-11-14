@@ -12,8 +12,9 @@ import (
 
 func ruleSets() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_cdn_rule_sets",
-		Resolver: fetchCDNRuleSets,
+		Name:        "azure_cdn_rule_sets",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/cdn/mgmt/2020-09-01/cdn#RuleSet`,
+		Resolver:    fetchCDNRuleSets,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -22,8 +23,8 @@ func ruleSets() *schema.Table {
 			},
 			{
 				Name:     "cdn_profile_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "provisioning_state",

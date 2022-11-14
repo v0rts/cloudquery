@@ -9,9 +9,10 @@ import (
 
 func DomainNameRestApiMappings() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_apigatewayv2_domain_name_rest_api_mappings",
-		Resolver:  fetchApigatewayv2DomainNameRestApiMappings,
-		Multiplex: client.ServiceAccountRegionMultiplexer("apigateway"),
+		Name:        "aws_apigatewayv2_domain_name_rest_api_mappings",
+		Description: `https://docs.aws.amazon.com/apigateway/latest/api/API_ApiMapping.html`,
+		Resolver:    fetchApigatewayv2DomainNameRestApiMappings,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("apigateway"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func DomainNameRestApiMappings() *schema.Table {
 			{
 				Name:     "domain_name_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "arn",

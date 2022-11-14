@@ -9,9 +9,10 @@ import (
 
 func TrailEventSelectors() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_cloudtrail_trail_event_selectors",
-		Resolver:  fetchCloudtrailTrailEventSelectors,
-		Multiplex: client.ServiceAccountRegionMultiplexer("cloudtrail"),
+		Name:        "aws_cloudtrail_trail_event_selectors",
+		Description: `https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_EventSelector.html`,
+		Resolver:    fetchCloudtrailTrailEventSelectors,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("cloudtrail"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func TrailEventSelectors() *schema.Table {
 			{
 				Name:     "trail_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "data_resources",

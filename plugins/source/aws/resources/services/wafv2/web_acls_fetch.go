@@ -8,17 +8,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/wafv2"
 	"github.com/aws/aws-sdk-go-v2/service/wafv2/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/wafv2/models"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
 
-type WebACLWrapper struct {
-	*types.WebACL
-	LoggingConfiguration *types.LoggingConfiguration
-}
-
 func fetchWafv2WebAcls(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
-	service := c.Services().WafV2
+	service := c.Services().Wafv2
 
 	config := wafv2.ListWebACLsInput{
 		Scope: c.WAFScope,
@@ -29,40 +25,8 @@ func fetchWafv2WebAcls(ctx context.Context, meta schema.ClientMeta, parent *sche
 		if err != nil {
 			return err
 		}
-		for _, webAcl := range output.WebACLs {
-			webAclConfig := wafv2.GetWebACLInput{Id: webAcl.Id, Name: webAcl.Name, Scope: c.WAFScope}
-			webAclOutput, err := service.GetWebACL(ctx, &webAclConfig, func(options *wafv2.Options) {
-				options.Region = c.Region
-			})
-			if err != nil {
-				return err
-			}
 
-			cfg := wafv2.GetLoggingConfigurationInput{
-				ResourceArn: webAclOutput.WebACL.ARN,
-			}
-
-			loggingConfigurationOutput, err := service.GetLoggingConfiguration(ctx, &cfg, func(options *wafv2.Options) {
-				options.Region = c.Region
-			})
-			if err != nil {
-				if client.IsAWSError(err, "WAFNonexistentItemException") {
-					c.Logger().Debug().Err(err).Msg("Logging configuration not found for")
-				} else {
-					c.Logger().Error().Err(err).Msg("GetLoggingConfiguration failed with error")
-				}
-			}
-
-			var webAclLoggingConfiguration *types.LoggingConfiguration
-			if loggingConfigurationOutput != nil {
-				webAclLoggingConfiguration = loggingConfigurationOutput.LoggingConfiguration
-			}
-
-			res <- &WebACLWrapper{
-				webAclOutput.WebACL,
-				webAclLoggingConfiguration,
-			}
-		}
+		res <- output.WebACLs
 
 		if aws.ToString(output.NextMarker) == "" {
 			break
@@ -71,11 +35,52 @@ func fetchWafv2WebAcls(ctx context.Context, meta schema.ClientMeta, parent *sche
 	}
 	return nil
 }
+
+func getWebAcl(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Wafv2
+	webAcl := resource.Item.(types.WebACLSummary)
+
+	webAclConfig := wafv2.GetWebACLInput{Id: webAcl.Id, Name: webAcl.Name, Scope: c.WAFScope}
+	webAclOutput, err := svc.GetWebACL(ctx, &webAclConfig, func(options *wafv2.Options) {
+		options.Region = c.Region
+	})
+	if err != nil {
+		return err
+	}
+
+	cfg := wafv2.GetLoggingConfigurationInput{
+		ResourceArn: webAclOutput.WebACL.ARN,
+	}
+
+	loggingConfigurationOutput, err := svc.GetLoggingConfiguration(ctx, &cfg, func(options *wafv2.Options) {
+		options.Region = c.Region
+	})
+	if err != nil {
+		if client.IsAWSError(err, "WAFNonexistentItemException") {
+			c.Logger().Debug().Err(err).Msg("Logging configuration not found for")
+		} else {
+			c.Logger().Error().Err(err).Msg("GetLoggingConfiguration failed with error")
+		}
+	}
+
+	var webAclLoggingConfiguration *types.LoggingConfiguration
+	if loggingConfigurationOutput != nil {
+		webAclLoggingConfiguration = loggingConfigurationOutput.LoggingConfiguration
+	}
+
+	resource.Item = &models.WebACLWrapper{
+		WebACL:               webAclOutput.WebACL,
+		LoggingConfiguration: webAclLoggingConfiguration,
+	}
+	return nil
+}
+
 func resolveWafv2webACLResourcesForWebACL(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
-	webACL := resource.Item.(*WebACLWrapper)
+	webACL := resource.Item.(*models.WebACLWrapper)
 
 	cl := meta.(*client.Client)
-	service := cl.Services().WafV2
+	service := cl.Services().Wafv2
 
 	resourceArns := []string{}
 	if cl.WAFScope == types.ScopeCloudfront {
@@ -109,10 +114,10 @@ func resolveWafv2webACLResourcesForWebACL(ctx context.Context, meta schema.Clien
 	return resource.Set(c.Name, resourceArns)
 }
 func resolveWebACLTags(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
-	webACL := resource.Item.(*WebACLWrapper)
+	webACL := resource.Item.(*models.WebACLWrapper)
 
 	cl := meta.(*client.Client)
-	service := cl.Services().WafV2
+	service := cl.Services().Wafv2
 
 	// Resolve tags
 	outputTags := make(map[string]*string)

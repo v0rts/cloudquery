@@ -9,9 +9,10 @@ import (
 
 func LoadBalancers() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_elbv2_load_balancers",
-		Resolver:  fetchElbv2LoadBalancers,
-		Multiplex: client.ServiceAccountRegionMultiplexer("elasticloadbalancing"),
+		Name:        "aws_elbv2_load_balancers",
+		Description: `https://docs.aws.amazon.com/elasticloadbalancing/latest/APIReference/API_LoadBalancer.html`,
+		Resolver:    fetchElbv2LoadBalancers,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("elasticloadbalancing"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -58,7 +59,7 @@ func LoadBalancers() *schema.Table {
 				Resolver: schema.PathResolver("CreatedTime"),
 			},
 			{
-				Name:     "customer_owned_ipv_4_pool",
+				Name:     "customer_owned_ipv4_pool",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("CustomerOwnedIpv4Pool"),
 			},

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudtrail/types"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/cloudtrail/models"
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
@@ -12,9 +13,10 @@ import (
 func CloudtrailResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "trails",
-			Struct:     &types.Trail{},
-			SkipFields: []string{"TrailARN"},
+			SubService:  "trails",
+			Struct:      &models.CloudTrailWrapper{},
+			Description: "https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_Trail.html",
+			SkipFields:  []string{"TrailARN"},
 			ExtraColumns: append(defaultRegionalColumns, []codegen.ColumnDefinition{
 				{
 					Name:     "cloudwatch_logs_log_group_name",
@@ -38,16 +40,17 @@ func CloudtrailResources() []*Resource {
 			},
 		},
 		{
-			SubService: "trail_event_selectors",
-			Struct:     &types.EventSelector{},
-			SkipFields: []string{},
+			SubService:  "trail_event_selectors",
+			Struct:      &types.EventSelector{},
+			Description: "https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_EventSelector.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "trail_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},

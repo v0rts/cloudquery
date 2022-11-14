@@ -9,9 +9,10 @@ import (
 func ApplicationAutoScalingResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "policies",
-			Struct:     &types.ScalingPolicy{},
-			SkipFields: []string{"PolicyARN"},
+			SubService:  "policies",
+			Struct:      &types.ScalingPolicy{},
+			Description: "https://docs.aws.amazon.com/autoscaling/plans/APIReference/API_ScalingPolicy.html",
+			SkipFields:  []string{"PolicyARN"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -27,7 +28,7 @@ func ApplicationAutoScalingResources() []*Resource {
 
 	for _, r := range resources {
 		r.Service = "applicationautoscaling"
-		r.Multiplex = `client.ServiceAccountRegionMultiplexer("application-autoscaling")`
+		r.Multiplex = `client.ServiceAccountRegionNamespaceMultiplexer("application-autoscaling")`
 	}
 	return resources
 }

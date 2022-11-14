@@ -7,23 +7,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticbeanstalk"
 	"github.com/aws/aws-sdk-go-v2/service/elasticbeanstalk/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/elasticbeanstalk/models"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
-
-type ConfigurationOptionDescriptionWrapper struct {
-	types.ConfigurationOptionDescription
-	ApplicationArn string
-}
-
-type ConfigurationSettingsDescriptionWrapper struct {
-	types.ConfigurationSettingsDescription
-	ApplicationArn string
-}
 
 func fetchElasticbeanstalkEnvironments(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	var config elasticbeanstalk.DescribeEnvironmentsInput
 	c := meta.(*client.Client)
-	svc := c.Services().ElasticBeanstalk
+	svc := c.Services().Elasticbeanstalk
 	for {
 		response, err := svc.DescribeEnvironments(ctx, &config)
 		if err != nil {
@@ -51,7 +42,7 @@ func resolveElasticbeanstalkEnvironmentTags(ctx context.Context, meta schema.Cli
 func resolveElasticbeanstalkEnvironmentListeners(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
 	p := resource.Item.(types.EnvironmentDescription)
 	cl := meta.(*client.Client)
-	svc := cl.Services().ElasticBeanstalk
+	svc := cl.Services().Elasticbeanstalk
 	tagsOutput, err := svc.ListTagsForResource(ctx, &elasticbeanstalk.ListTagsForResourceInput{
 		ResourceArn: p.EnvironmentArn,
 	}, func(o *elasticbeanstalk.Options) {})
@@ -76,7 +67,7 @@ func resolveElasticbeanstalkEnvironmentListeners(ctx context.Context, meta schem
 func fetchElasticbeanstalkConfigurationOptions(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	p := parent.Item.(types.EnvironmentDescription)
 	c := meta.(*client.Client)
-	svc := c.Services().ElasticBeanstalk
+	svc := c.Services().Elasticbeanstalk
 	configOptionsIn := elasticbeanstalk.DescribeConfigurationOptionsInput{
 		ApplicationName: p.ApplicationName,
 		EnvironmentName: p.EnvironmentName,
@@ -86,15 +77,14 @@ func fetchElasticbeanstalkConfigurationOptions(ctx context.Context, meta schema.
 		// It takes a few minutes for an environment to be terminated
 		// This ensures we don't error while trying to fetch related resources for a terminated environment
 		if client.IsInvalidParameterValueError(err) {
-			meta.Logger().Debug().Interface("environment", p.EnvironmentName).Interface("application", p.ApplicationName).Msg("Failed extracting configuration options for environment. It might be terminated")
 			return nil
 		}
 		return err
 	}
 
 	for _, option := range output.Options {
-		res <- ConfigurationOptionDescriptionWrapper{
-			option, c.ARN("elasticbeanstalk", "application", *p.ApplicationName),
+		res <- models.ConfigurationOptionDescriptionWrapper{
+			ConfigurationOptionDescription: option, ApplicationArn: c.ARN("elasticbeanstalk", "application", *p.ApplicationName),
 		}
 	}
 
@@ -104,7 +94,7 @@ func fetchElasticbeanstalkConfigurationOptions(ctx context.Context, meta schema.
 func fetchElasticbeanstalkConfigurationSettings(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	p := parent.Item.(types.EnvironmentDescription)
 	c := meta.(*client.Client)
-	svc := c.Services().ElasticBeanstalk
+	svc := c.Services().Elasticbeanstalk
 
 	configOptionsIn := elasticbeanstalk.DescribeConfigurationSettingsInput{
 		ApplicationName: p.ApplicationName,
@@ -115,15 +105,14 @@ func fetchElasticbeanstalkConfigurationSettings(ctx context.Context, meta schema
 		// It takes a few minutes for an environment to be terminated
 		// This ensures we don't error while trying to fetch related resources for a terminated environment
 		if client.IsInvalidParameterValueError(err) {
-			meta.Logger().Debug().Interface("environment", p.EnvironmentName).Interface("application", p.ApplicationName).Msg("Failed extracting configuration settings for environment. It might be terminated")
 			return nil
 		}
 		return err
 	}
 
 	for _, option := range output.ConfigurationSettings {
-		res <- ConfigurationSettingsDescriptionWrapper{
-			option, c.ARN("elasticbeanstalk", "application", *p.ApplicationName),
+		res <- models.ConfigurationSettingsDescriptionWrapper{
+			ConfigurationSettingsDescription: option, ApplicationArn: c.ARN("elasticbeanstalk", "application", *p.ApplicationName),
 		}
 	}
 

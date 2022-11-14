@@ -1,12 +1,20 @@
-
 # Table: aws_regions
-Describes a Region.
+
+https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Region.html
+
+The primary key for this table is **_cq_id**.
+
+
 ## Columns
-| Name        | Type           | Description  |
-| ------------- | ------------- | -----  |
-|account_id|text|The AWS Account ID of the resource.|
-|enabled|boolean|Defines if region is enabled stated or not.|
-|endpoint|text|The Region service endpoint.|
-|opt_in_status|text|The Region opt-in status|
-|region|text|The name of the Region.|
-|partition|text|AWS partition|
+| Name          | Type          |
+| ------------- | ------------- |
+|_cq_source_name|String|
+|_cq_sync_time|Timestamp|
+|_cq_id (PK)|UUID|
+|_cq_parent_id|UUID|
+|account_id|String|
+|enabled|Bool|
+|partition|String|
+|region|String|
+|endpoint|String|
+|opt_in_status|String|

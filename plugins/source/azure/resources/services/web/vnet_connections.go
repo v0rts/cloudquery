@@ -13,8 +13,9 @@ import (
 
 func vnetConnections() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_web_vnet_connections",
-		Resolver: fetchWebVnetConnections,
+		Name:        "azure_web_vnet_connections",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/web/mgmt/2020-12-01/web#VnetInfo`,
+		Resolver:    fetchWebVnetConnections,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func vnetConnections() *schema.Table {
 			},
 			{
 				Name:     "web_app_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "vnet_resource_id",
@@ -92,6 +93,10 @@ func fetchWebVnetConnections(ctx context.Context, meta schema.ClientMeta, parent
 	svc := meta.(*client.Client).Services().Web.VnetConnections
 
 	site := parent.Item.(web.Site)
+	if site.SiteConfig == nil || site.SiteConfig.VnetName == nil {
+		return nil
+	}
+
 	response, err := svc.GetVnetConnection(ctx, *site.ResourceGroup, *site.Name, *site.SiteConfig.VnetName)
 	if err != nil {
 		return err

@@ -9,9 +9,10 @@ import (
 
 func FunctionAliases() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lambda_function_aliases",
-		Resolver:  fetchLambdaFunctionAliases,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lambda"),
+		Name:                "aws_lambda_function_aliases",
+		Resolver:            fetchLambdaFunctionAliases,
+		PreResourceResolver: getFunctionAliasURLConfig,
+		Multiplex:           client.ServiceAccountRegionMultiplexer("lambda"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,12 +27,15 @@ func FunctionAliases() *schema.Table {
 			{
 				Name:     "function_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
-				Name:     "alias_arn",
+				Name:     "arn",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("AliasArn"),
+				CreationOptions: schema.ColumnCreationOptions{
+					PrimaryKey: true,
+				},
 			},
 			{
 				Name:     "description",

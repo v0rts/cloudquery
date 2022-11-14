@@ -1,0 +1,109 @@
+name: Wait for all required workflows to pass
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  wait_for_required_workflows:
+    timeout-minutes: 30
+    name: wait-for-required-workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get changed files
+        id: changed-files
+        uses: Ana06/get-changed-files@v2.1.0
+      - uses: actions/github-script@v6
+        env:
+          FILES: ${{ steps.changed-files.outputs.all }}
+        with:
+          script: |
+            const files = process.env.FILES.split(' ')
+            console.log(files)
+            let now = new Date().getTime()
+            const deadline = now + 60 * 1000 * 25
+            const matchesWorkflow = (file, action) => {
+              if (!file.startsWith('.github/workflows/')) {
+                return false
+              }
+              const fs = require("fs");
+              const contents = fs.readFileSync(file, 'utf8');
+              return contents.includes(`name: "${action}"`)
+            }
+            const matchesFile = (action) => {
+              return files.some(file => file.startsWith(action) || matchesWorkflow(file, action))
+            }
+            let actions = ["cli",
+                           "plugins/source/aws",
+                           "plugins/source/azure",
+                           "plugins/source/cloudflare",
+                           "plugins/source/digitalocean",
+                           "plugins/source/gcp",
+                           "plugins/source/github",
+                           "plugins/source/heroku",
+                           "plugins/source/k8s",
+                           "plugins/source/okta",
+                           "plugins/source/terraform",
+                           "plugins/source/test",
+                           
+                           "plugins/destination/postgresql",
+                           "plugins/destination/test",
+                           "plugins/destination/csv",
+                           "plugins/destination/sqlite",
+                           ].filter(action => matchesFile(action))
+            if (actions.length === 0) {
+              console.log("No actions to wait for")
+              return
+            }
+
+            // Each module should have a 'validate-release' job
+            for (const action of actions) {
+              actions = [...actions, 'validate-release']
+            }
+
+            // We test the CLI on multiple OSes, so we need to wait for all of them
+            if (actions.includes("cli")) {
+              actions = actions.filter(action => action !== "cli")
+              actions = ["cli (ubuntu-latest)", "cli (windows-latest)", "cli (macos-latest)", ...actions]
+            }
+
+            // Enforce policy tests for AWS,GCP,Azure and K8s plugins
+            const pluginsWithPolicyTests = ["plugins/source/aws", "plugins/source/gcp", "plugins/source/azure", "plugins/source/k8s"]
+            for (const plugin of pluginsWithPolicyTests) {
+              if (actions.includes(plugin)) {
+                actions = [...actions, 'test-policies']
+              }
+            }
+
+            pendingActions = [...actions]
+            console.log(`Waiting for ${pendingActions.join(", ")}`)
+            while (now <= deadline) {
+              const checkRuns = await github.paginate(github.rest.checks.listForRef, {
+                owner: 'cloudquery',
+                repo: 'cloudquery',
+                ref: context.payload.pull_request.head.sha,
+                status: 'completed',
+                per_page: 100
+              })
+              const runs = checkRuns.map(({ name, conclusion }) => ({ name, conclusion }))
+              console.log(`Got the following check runs: ${JSON.stringify(runs)}`)
+              const matchingRuns = runs.filter(({ name }) => actions.includes(name))
+              const failedRuns = matchingRuns.filter(({ conclusion }) => conclusion !== 'success')
+              if (failedRuns.length > 0) {
+                throw new Error(`The following required workflows failed: ${failedRuns.map(({ name }) => name).join(", ")}`)
+              }
+              if (matchingRuns.length === actions.length) {
+                console.log("All required workflows have passed")
+                return
+              }
+              
+              pendingActions = actions.filter(action => !runs.some(({ name }) => name === action))
+              console.log(`Waiting for ${pendingActions.join(", ")}`)
+              await new Promise(r => setTimeout(r, 5000));
+              now = new Date().getTime()
+            }
+            throw new Error(`Timed out waiting for ${pendingActions.join(', ')}`)
+
+            

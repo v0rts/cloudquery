@@ -1,13 +1,22 @@
-
 # Table: tf_resource_instances
+
 Terraform resource instances
+
+The primary key for this table is **_cq_id**.
+
+## Relations
+This table depends on [tf_resources](tf_resources.md).
+
 ## Columns
-| Name        | Type           | Description  |
-| ------------- | ------------- | -----  |
-|tf_resource_cq_id|uuid|Unique CloudQuery ID of tf_resource_instance table (FK)|
-|resource_id|uuid|Parent resource id|
-|instance_id|text|Instance id|
-|schema_version|bigint|Terraform schema version|
-|attributes|jsonb|Instance attributes|
-|dependencies|text[]|Instance dependencies array|
-|create_before_destroy|boolean|Should resource should be created before destroying|
+| Name          | Type          |
+| ------------- | ------------- |
+|_cq_source_name|String|
+|_cq_sync_time|Timestamp|
+|_cq_id (PK)|UUID|
+|_cq_parent_id|UUID|
+|resource_name|String|
+|instance_id|String|
+|schema_version|Int|
+|attributes|JSON|
+|dependencies|StringArray|
+|create_before_destroy|Bool|

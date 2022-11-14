@@ -13,8 +13,9 @@ import (
 
 func databases() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_sql_databases",
-		Resolver: fetchSQLDatabases,
+		Name:        "azure_sql_databases",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/preview/sql/mgmt/v4.0/sql#Database`,
+		Resolver:    fetchSQLDatabases,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func databases() *schema.Table {
 			},
 			{
 				Name:     "sql_server_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "sku",
@@ -75,6 +76,11 @@ func databases() *schema.Table {
 				Name:     "status",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("Status"),
+			},
+			{
+				Name:     "database_id",
+				Type:     schema.TypeUUID,
+				Resolver: schema.PathResolver("DatabaseID"),
 			},
 			{
 				Name:     "creation_date",

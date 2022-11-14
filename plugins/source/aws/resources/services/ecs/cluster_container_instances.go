@@ -9,9 +9,10 @@ import (
 
 func ClusterContainerInstances() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ecs_cluster_container_instances",
-		Resolver:  fetchEcsClusterContainerInstances,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ecs"),
+		Name:        "aws_ecs_cluster_container_instances",
+		Description: `https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerInstance.html`,
+		Resolver:    fetchEcsClusterContainerInstances,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("ecs"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,12 +27,7 @@ func ClusterContainerInstances() *schema.Table {
 			{
 				Name:     "cluster_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
-			},
-			{
-				Name:     "tags",
-				Type:     schema.TypeJSON,
-				Resolver: client.ResolveTags,
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "agent_connected",
@@ -64,7 +60,7 @@ func ClusterContainerInstances() *schema.Table {
 				Resolver: schema.PathResolver("ContainerInstanceArn"),
 			},
 			{
-				Name:     "ec_2_instance_id",
+				Name:     "ec2_instance_id",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("Ec2InstanceId"),
 			},
@@ -107,6 +103,11 @@ func ClusterContainerInstances() *schema.Table {
 				Name:     "status_reason",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("StatusReason"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "version",

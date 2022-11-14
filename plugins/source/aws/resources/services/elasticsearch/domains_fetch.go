@@ -11,26 +11,34 @@ import (
 
 func fetchElasticsearchDomains(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
 	c := meta.(*client.Client)
-	optsFunc := func(options *elasticsearchservice.Options) {
-		options.Region = c.Region
-	}
-	svc := c.Services().ElasticSearch
-	out, err := svc.ListDomainNames(ctx, &elasticsearchservice.ListDomainNamesInput{}, optsFunc)
+	svc := c.Services().Elasticsearchservice
+	out, err := svc.ListDomainNames(ctx, &elasticsearchservice.ListDomainNamesInput{})
 	if err != nil {
 		return err
 	}
-	for _, info := range out.DomainNames {
-		domainOutput, err := svc.DescribeElasticsearchDomain(ctx, &elasticsearchservice.DescribeElasticsearchDomainInput{DomainName: info.DomainName}, optsFunc)
-		if err != nil {
-			return nil
-		}
-		res <- domainOutput.DomainStatus
-	}
+
+	res <- out.DomainNames
 	return nil
 }
+
+func getDomain(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Elasticsearchservice
+
+	info := resource.Item.(types.DomainInfo)
+
+	domainOutput, err := svc.DescribeElasticsearchDomain(ctx, &elasticsearchservice.DescribeElasticsearchDomainInput{DomainName: info.DomainName})
+	if err != nil {
+		return nil
+	}
+
+	resource.Item = domainOutput.DomainStatus
+	return nil
+}
+
 func resolveElasticsearchDomainTags(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
 	region := meta.(*client.Client).Region
-	svc := meta.(*client.Client).Services().ElasticSearch
+	svc := meta.(*client.Client).Services().Elasticsearchservice
 	domain := resource.Item.(*types.ElasticsearchDomainStatus)
 	tagsOutput, err := svc.ListTags(ctx, &elasticsearchservice.ListTagsInput{
 		ARN: domain.ARN,

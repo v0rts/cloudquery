@@ -9,9 +9,10 @@ import (
 
 func EbsSnapshots() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ec2_ebs_snapshots",
-		Resolver:  fetchEc2EbsSnapshots,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ec2"),
+		Name:        "aws_ec2_ebs_snapshots",
+		Description: `https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_Snapshot.html`,
+		Resolver:    fetchEc2EbsSnapshots,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("ec2"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -33,7 +34,7 @@ func EbsSnapshots() *schema.Table {
 			},
 			{
 				Name:     "attribute",
-				Type:     schema.TypeString,
+				Type:     schema.TypeJSON,
 				Resolver: resolveEbsSnapshotAttribute,
 			},
 			{
@@ -109,7 +110,7 @@ func EbsSnapshots() *schema.Table {
 			{
 				Name:     "tags",
 				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("Tags"),
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "volume_id",

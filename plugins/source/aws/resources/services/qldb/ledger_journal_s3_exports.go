@@ -9,9 +9,10 @@ import (
 
 func LedgerJournalS3Exports() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_qldb_ledger_journal_s3_exports",
-		Resolver:  fetchQldbLedgerJournalS3Exports,
-		Multiplex: client.ServiceAccountRegionMultiplexer("qldb"),
+		Name:        "aws_qldb_ledger_journal_s3_exports",
+		Description: `https://docs.aws.amazon.com/qldb/latest/developerguide/API_JournalS3ExportDescription.html`,
+		Resolver:    fetchQldbLedgerJournalS3Exports,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("qldb"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func LedgerJournalS3Exports() *schema.Table {
 			{
 				Name:     "ledger_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "exclusive_end_time",
@@ -59,7 +60,7 @@ func LedgerJournalS3Exports() *schema.Table {
 				Resolver: schema.PathResolver("RoleArn"),
 			},
 			{
-				Name:     "s_3_export_configuration",
+				Name:     "s3_export_configuration",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("S3ExportConfiguration"),
 			},

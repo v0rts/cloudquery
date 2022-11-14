@@ -13,8 +13,9 @@ import (
 
 func firewallRules() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_sql_firewall_rules",
-		Resolver: fetchSQLFirewallRules,
+		Name:        "azure_sql_firewall_rules",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/preview/sql/mgmt/v4.0/sql#FirewallRule`,
+		Resolver:    fetchSQLFirewallRules,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func firewallRules() *schema.Table {
 			},
 			{
 				Name:     "sql_server_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "kind",

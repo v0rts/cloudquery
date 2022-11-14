@@ -9,9 +9,10 @@ import (
 
 func Lags() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_directconnect_lags",
-		Resolver:  fetchDirectconnectLags,
-		Multiplex: client.ServiceAccountRegionMultiplexer("directconnect"),
+		Name:        "aws_directconnect_lags",
+		Description: `https://docs.aws.amazon.com/directconnect/latest/APIReference/API_Lag.html`,
+		Resolver:    fetchDirectconnectLags,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("directconnect"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -52,7 +53,7 @@ func Lags() *schema.Table {
 				Resolver: schema.PathResolver("AwsDevice"),
 			},
 			{
-				Name:     "aws_device_v_2",
+				Name:     "aws_device_v2",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("AwsDeviceV2"),
 			},

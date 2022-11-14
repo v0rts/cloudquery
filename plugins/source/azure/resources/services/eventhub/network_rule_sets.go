@@ -13,8 +13,9 @@ import (
 
 func networkRuleSets() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_eventhub_network_rule_sets",
-		Resolver: fetchEventHubNetworkRuleSets,
+		Name:        "azure_eventhub_network_rule_sets",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/preview/eventhub/mgmt/2018-01-01-preview/eventhub#NetworkRuleSet`,
+		Resolver:    fetchEventHubNetworkRuleSets,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func networkRuleSets() *schema.Table {
 			},
 			{
 				Name:     "eventhub_namespace_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "trusted_service_access_enabled",

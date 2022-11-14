@@ -69,18 +69,18 @@ func Metrics() *schema.Table {
 			},
 			{
 				Name:     "create_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("CreateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("CreateTime"),
 			},
 			{
 				Name:     "update_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("UpdateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("UpdateTime"),
 			},
 			{
 				Name:     "version",
-				Type:     schema.TypeInt,
-				Resolver: schema.PathResolver("Version"),
+				Type:     schema.TypeString,
+				Resolver: client.ResolveProtoEnum("Version"),
 			},
 		},
 	}

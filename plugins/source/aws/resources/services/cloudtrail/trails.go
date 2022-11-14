@@ -9,9 +9,10 @@ import (
 
 func Trails() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_cloudtrail_trails",
-		Resolver:  fetchCloudtrailTrails,
-		Multiplex: client.ServiceAccountRegionMultiplexer("cloudtrail"),
+		Name:        "aws_cloudtrail_trails",
+		Description: `https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_Trail.html`,
+		Resolver:    fetchCloudtrailTrails,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("cloudtrail"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -97,12 +98,12 @@ func Trails() *schema.Table {
 				Resolver: schema.PathResolver("Name"),
 			},
 			{
-				Name:     "s_3_bucket_name",
+				Name:     "s3_bucket_name",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("S3BucketName"),
 			},
 			{
-				Name:     "s_3_key_prefix",
+				Name:     "s3_key_prefix",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("S3KeyPrefix"),
 			},
@@ -115,6 +116,11 @@ func Trails() *schema.Table {
 				Name:     "sns_topic_name",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("SnsTopicName"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: schema.PathResolver("Tags"),
 			},
 		},
 

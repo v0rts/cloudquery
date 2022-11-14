@@ -9,9 +9,10 @@ import (
 
 func BucketLifecycles() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_s3_bucket_lifecycles",
-		Resolver:  fetchS3BucketLifecycles,
-		Multiplex: client.AccountMultiplex,
+		Name:        "aws_s3_bucket_lifecycles",
+		Description: `https://docs.aws.amazon.com/AmazonS3/latest/API/API_LifecycleRule.html`,
+		Resolver:    fetchS3BucketLifecycles,
+		Multiplex:   client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -21,7 +22,7 @@ func BucketLifecycles() *schema.Table {
 			{
 				Name:     "bucket_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "status",

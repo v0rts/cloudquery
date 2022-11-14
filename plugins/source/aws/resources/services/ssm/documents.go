@@ -9,9 +9,11 @@ import (
 
 func Documents() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_ssm_documents",
-		Resolver:  fetchSsmDocuments,
-		Multiplex: client.ServiceAccountRegionMultiplexer("ssm"),
+		Name:                "aws_ssm_documents",
+		Description:         `https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_DocumentDescription.html`,
+		Resolver:            fetchSsmDocuments,
+		PreResourceResolver: getDocument,
+		Multiplex:           client.ServiceAccountRegionMultiplexer("ssm"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -35,11 +37,6 @@ func Documents() *schema.Table {
 				Name:     "permissions",
 				Type:     schema.TypeJSON,
 				Resolver: resolveDocumentPermission,
-			},
-			{
-				Name:     "tags",
-				Type:     schema.TypeJSON,
-				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "approved_version",
@@ -162,7 +159,7 @@ func Documents() *schema.Table {
 				Resolver: schema.PathResolver("SchemaVersion"),
 			},
 			{
-				Name:     "sha_1",
+				Name:     "sha1",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("Sha1"),
 			},
@@ -175,6 +172,11 @@ func Documents() *schema.Table {
 				Name:     "status_information",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("StatusInformation"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "target_type",

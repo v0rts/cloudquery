@@ -9,9 +9,10 @@ import (
 
 func HostedZoneQueryLoggingConfigs() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_route53_hosted_zone_query_logging_configs",
-		Resolver:  fetchRoute53HostedZoneQueryLoggingConfigs,
-		Multiplex: client.AccountMultiplex,
+		Name:        "aws_route53_hosted_zone_query_logging_configs",
+		Description: `https://docs.aws.amazon.com/Route53/latest/APIReference/API_QueryLoggingConfig.html`,
+		Resolver:    fetchRoute53HostedZoneQueryLoggingConfigs,
+		Multiplex:   client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -29,7 +30,7 @@ func HostedZoneQueryLoggingConfigs() *schema.Table {
 			{
 				Name:     "hosted_zone_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "cloud_watch_logs_log_group_arn",

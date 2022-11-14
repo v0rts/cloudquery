@@ -10,9 +10,10 @@ import (
 func BackupResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "global_settings",
-			Struct:     &backup.DescribeGlobalSettingsOutput{},
-			SkipFields: []string{},
+			SubService:  "global_settings",
+			Description: "https://docs.aws.amazon.com/aws-backup/latest/devguide/API_DescribeGlobalSettings.html",
+			Struct:      &backup.DescribeGlobalSettingsOutput{},
+			SkipFields:  []string{},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -23,9 +24,11 @@ func BackupResources() []*Resource {
 			},
 		},
 		{
-			SubService: "plans",
-			Struct:     &backup.GetBackupPlanOutput{},
-			SkipFields: []string{"BackupPlanArn"},
+			SubService:          "plans",
+			Description:         "https://docs.aws.amazon.com/aws-backup/latest/devguide/API_GetBackupPlan.html",
+			Struct:              &backup.GetBackupPlanOutput{},
+			SkipFields:          []string{"BackupPlanArn"},
+			PreResourceResolver: "getPlan",
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -46,23 +49,25 @@ func BackupResources() []*Resource {
 			},
 		},
 		{
-			SubService: "plan_selections",
-			Struct:     &backup.GetBackupSelectionOutput{},
-			SkipFields: []string{},
+			SubService:  "plan_selections",
+			Description: "https://docs.aws.amazon.com/aws-backup/latest/devguide/API_GetBackupSelection.html",
+			Struct:      &backup.GetBackupSelectionOutput{},
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "plan_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 				}...),
 		},
 		{
-			SubService: "region_settings",
-			Struct:     &backup.DescribeRegionSettingsOutput{},
-			SkipFields: []string{},
+			SubService:  "region_settings",
+			Description: "https://docs.aws.amazon.com/aws-backup/latest/devguide/API_DescribeRegionSettings.html",
+			Struct:      &backup.DescribeRegionSettingsOutput{},
+			SkipFields:  []string{},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -79,9 +84,10 @@ func BackupResources() []*Resource {
 			},
 		},
 		{
-			SubService: "vaults",
-			Struct:     &types.BackupVaultListMember{},
-			SkipFields: []string{"BackupVaultArn"},
+			SubService:  "vaults",
+			Struct:      &types.BackupVaultListMember{},
+			Description: "https://docs.aws.amazon.com/aws-backup/latest/devguide/API_BackupVaultListMember.html",
+			SkipFields:  []string{"BackupVaultArn"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -114,16 +120,23 @@ func BackupResources() []*Resource {
 			},
 		},
 		{
-			SubService: "vault_recovery_points",
-			Struct:     &types.RecoveryPointByBackupVault{},
-			SkipFields: []string{},
+			SubService:  "vault_recovery_points",
+			Struct:      &types.RecoveryPointByBackupVault{},
+			Description: "https://docs.aws.amazon.com/aws-backup/latest/devguide/API_RecoveryPointByBackupVault.html",
+			SkipFields:  []string{"RecoveryPointArn"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "vault_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
+					},
+					{
+						Name:     "arn",
+						Type:     schema.TypeString,
+						Resolver: `schema.PathResolver("RecoveryPointArn")`,
+						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 					{
 						Name:     "tags",

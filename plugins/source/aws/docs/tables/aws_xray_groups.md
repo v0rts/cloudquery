@@ -1,14 +1,21 @@
-
 # Table: aws_xray_groups
-Details for a group without metadata
+
+https://docs.aws.amazon.com/xray/latest/api/API_Group.html
+
+The primary key for this table is **arn**.
+
+
 ## Columns
-| Name        | Type           | Description  |
-| ------------- | ------------- | -----  |
-|account_id|text|The AWS Account ID of the resource.|
-|region|text|The AWS Region of the resource.|
-|tags|jsonb||
-|filter_expression|text|The filter expression defining the parameters to include traces|
-|arn|text|The ARN of the group generated based on the GroupName|
-|group_name|text|The unique case-sensitive name of the group|
-|insights_enabled|boolean|Set the InsightsEnabled value to true to enable insights or false to disable insights|
-|notifications_enabled|boolean|Set the NotificationsEnabled value to true to enable insights notifications Notifications can only be enabled on a group with InsightsEnabled set to true|
+| Name          | Type          |
+| ------------- | ------------- |
+|_cq_source_name|String|
+|_cq_sync_time|Timestamp|
+|_cq_id|UUID|
+|_cq_parent_id|UUID|
+|account_id|String|
+|region|String|
+|arn (PK)|String|
+|tags|JSON|
+|filter_expression|String|
+|group_name|String|
+|insights_configuration|JSON|

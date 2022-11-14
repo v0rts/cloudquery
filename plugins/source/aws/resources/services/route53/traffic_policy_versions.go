@@ -9,9 +9,10 @@ import (
 
 func TrafficPolicyVersions() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_route53_traffic_policy_versions",
-		Resolver:  fetchRoute53TrafficPolicyVersions,
-		Multiplex: client.AccountMultiplex,
+		Name:        "aws_route53_traffic_policy_versions",
+		Description: `https://docs.aws.amazon.com/Route53/latest/APIReference/API_TrafficPolicy.html`,
+		Resolver:    fetchRoute53TrafficPolicyVersions,
+		Multiplex:   client.AccountMultiplex,
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -21,7 +22,7 @@ func TrafficPolicyVersions() *schema.Table {
 			{
 				Name:     "traffic_policy_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
@@ -44,8 +45,8 @@ func TrafficPolicyVersions() *schema.Table {
 			},
 			{
 				Name:     "document",
-				Type:     schema.TypeString,
-				Resolver: schema.PathResolver("Document"),
+				Type:     schema.TypeJSON,
+				Resolver: client.MarshaledJsonResolver("Document"),
 			},
 			{
 				Name:     "name",

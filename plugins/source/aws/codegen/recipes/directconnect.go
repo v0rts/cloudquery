@@ -9,9 +9,10 @@ import (
 func DirectConnectResources() []*Resource {
 	resources := []*Resource{
 		{
-			SubService: "connections",
-			Struct:     &types.Connection{},
-			SkipFields: []string{"ConnectionId", "Tags", "Region"},
+			SubService:  "connections",
+			Struct:      &types.Connection{},
+			Description: "https://docs.aws.amazon.com/directconnect/latest/APIReference/API_Connection.html",
+			SkipFields:  []string{"ConnectionId", "Region"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -27,17 +28,13 @@ func DirectConnectResources() []*Resource {
 						Resolver: `schema.PathResolver("ConnectionId")`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
-					{
-						Name:     "tags",
-						Type:     schema.TypeJSON,
-						Resolver: `client.ResolveTags`,
-					},
 				}...),
 		},
 		{
-			SubService: "gateways",
-			Struct:     &types.DirectConnectGateway{},
-			SkipFields: []string{"DirectConnectGatewayId"},
+			SubService:  "gateways",
+			Struct:      &types.DirectConnectGateway{},
+			Description: "https://docs.aws.amazon.com/directconnect/latest/APIReference/API_DirectConnectGateway.html",
+			SkipFields:  []string{"DirectConnectGatewayId"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -59,47 +56,50 @@ func DirectConnectResources() []*Resource {
 			},
 		},
 		{
-			SubService: "gateway_associations",
-			Struct:     &types.DirectConnectGatewayAssociation{},
-			SkipFields: []string{},
+			SubService:  "gateway_associations",
+			Struct:      &types.DirectConnectGatewayAssociation{},
+			Description: "https://docs.aws.amazon.com/directconnect/latest/APIReference/API_DirectConnectGatewayAssociation.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "gateway_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "gateway_id",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("id")`,
+						Resolver: `schema.ParentColumnResolver("id")`,
 					},
 				}...),
 		},
 		{
-			SubService: "gateway_attachments",
-			Struct:     &types.DirectConnectGatewayAttachment{},
-			SkipFields: []string{},
+			SubService:  "gateway_attachments",
+			Struct:      &types.DirectConnectGatewayAttachment{},
+			Description: "https://docs.aws.amazon.com/directconnect/latest/APIReference/API_DirectConnectGatewayAttachment.html",
+			SkipFields:  []string{},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
 					{
 						Name:     "gateway_arn",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("arn")`,
+						Resolver: `schema.ParentColumnResolver("arn")`,
 					},
 					{
 						Name:     "gateway_id",
 						Type:     schema.TypeString,
-						Resolver: `schema.ParentResourceFieldResolver("id")`,
+						Resolver: `schema.ParentColumnResolver("id")`,
 					},
 				}...),
 		},
 		{
-			SubService: "lags",
-			Struct:     &types.Lag{},
-			SkipFields: []string{"LagId", "Tags", "Region"},
+			SubService:  "lags",
+			Struct:      &types.Lag{},
+			Description: "https://docs.aws.amazon.com/directconnect/latest/APIReference/API_Lag.html",
+			SkipFields:  []string{"LagId", "Tags", "Region"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -122,9 +122,10 @@ func DirectConnectResources() []*Resource {
 				}...),
 		},
 		{
-			SubService: "virtual_gateways",
-			Struct:     &types.VirtualGateway{},
-			SkipFields: []string{"VirtualGatewayId"},
+			SubService:  "virtual_gateways",
+			Struct:      &types.VirtualGateway{},
+			Description: "https://docs.aws.amazon.com/directconnect/latest/APIReference/API_VirtualGateway.html",
+			SkipFields:  []string{"VirtualGatewayId"},
 			ExtraColumns: []codegen.ColumnDefinition{
 				{
 					Name:     "account_id",
@@ -147,9 +148,10 @@ func DirectConnectResources() []*Resource {
 			},
 		},
 		{
-			SubService: "virtual_interfaces",
-			Struct:     &types.VirtualInterface{},
-			SkipFields: []string{"Tags", "VirtualInterfaceId", "Region"},
+			SubService:  "virtual_interfaces",
+			Struct:      &types.VirtualInterface{},
+			Description: "https://docs.aws.amazon.com/directconnect/latest/APIReference/API_VirtualInterface.html",
+			SkipFields:  []string{"VirtualInterfaceId", "Region"},
 			ExtraColumns: append(
 				defaultRegionalColumns,
 				[]codegen.ColumnDefinition{
@@ -158,11 +160,6 @@ func DirectConnectResources() []*Resource {
 						Type:     schema.TypeString,
 						Resolver: `resolveVirtualInterfaceARN()`,
 						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
-					},
-					{
-						Name:     "tags",
-						Type:     schema.TypeJSON,
-						Resolver: `client.ResolveTags`,
 					},
 					{
 						Name:     "id",

@@ -9,9 +9,10 @@ import (
 
 func Environments() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_elasticbeanstalk_environments",
-		Resolver:  fetchElasticbeanstalkEnvironments,
-		Multiplex: client.ServiceAccountRegionMultiplexer("elasticbeanstalk"),
+		Name:        "aws_elasticbeanstalk_environments",
+		Description: `https://docs.aws.amazon.com/elasticbeanstalk/latest/APIReference/API_EnvironmentDescription.html`,
+		Resolver:    fetchElasticbeanstalkEnvironments,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("elasticbeanstalk"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -20,6 +21,11 @@ func Environments() *schema.Table {
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
+			},
+			{
+				Name:     "arn",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("EnvironmentArn"),
 			},
 			{
 				Name:     "region",
@@ -78,11 +84,6 @@ func Environments() *schema.Table {
 				Name:     "endpoint_url",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("EndpointURL"),
-			},
-			{
-				Name:     "environment_arn",
-				Type:     schema.TypeString,
-				Resolver: schema.PathResolver("EnvironmentArn"),
 			},
 			{
 				Name:     "environment_links",

@@ -9,9 +9,10 @@ import (
 
 func FunctionVersions() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lambda_function_versions",
-		Resolver:  fetchLambdaFunctionVersions,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lambda"),
+		Name:        "aws_lambda_function_versions",
+		Description: `https://docs.aws.amazon.com/lambda/latest/dg/API_FunctionConfiguration.html`,
+		Resolver:    fetchLambdaFunctionVersions,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("lambda"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func FunctionVersions() *schema.Table {
 			{
 				Name:     "function_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "architectures",
@@ -34,7 +35,7 @@ func FunctionVersions() *schema.Table {
 				Resolver: schema.PathResolver("Architectures"),
 			},
 			{
-				Name:     "code_sha_256",
+				Name:     "code_sha256",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("CodeSha256"),
 			},

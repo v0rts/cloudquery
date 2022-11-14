@@ -9,9 +9,10 @@ import (
 
 func RegistrySchemaVersions() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_glue_registry_schema_versions",
-		Resolver:  fetchGlueRegistrySchemaVersions,
-		Multiplex: client.ServiceAccountRegionMultiplexer("glue"),
+		Name:                "aws_glue_registry_schema_versions",
+		Resolver:            fetchGlueRegistrySchemaVersions,
+		PreResourceResolver: getRegistrySchemaVersion,
+		Multiplex:           client.ServiceAccountRegionMultiplexer("glue"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,7 +27,7 @@ func RegistrySchemaVersions() *schema.Table {
 			{
 				Name:     "registry_schema_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "metadata",

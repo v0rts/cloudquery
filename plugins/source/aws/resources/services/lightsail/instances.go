@@ -9,9 +9,10 @@ import (
 
 func Instances() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_lightsail_instances",
-		Resolver:  fetchLightsailInstances,
-		Multiplex: client.ServiceAccountRegionMultiplexer("lightsail"),
+		Name:        "aws_lightsail_instances",
+		Description: `https://docs.aws.amazon.com/lightsail/2016-11-28/api-reference/API_Instance.html`,
+		Resolver:    fetchLightsailInstances,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("lightsail"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -34,11 +35,6 @@ func Instances() *schema.Table {
 				CreationOptions: schema.ColumnCreationOptions{
 					PrimaryKey: true,
 				},
-			},
-			{
-				Name:     "tags",
-				Type:     schema.TypeJSON,
-				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "add_ons",
@@ -76,7 +72,7 @@ func Instances() *schema.Table {
 				Resolver: schema.PathResolver("IpAddressType"),
 			},
 			{
-				Name:     "ipv_6_addresses",
+				Name:     "ipv6_addresses",
 				Type:     schema.TypeStringArray,
 				Resolver: schema.PathResolver("Ipv6Addresses"),
 			},
@@ -89,6 +85,11 @@ func Instances() *schema.Table {
 				Name:     "location",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("Location"),
+			},
+			{
+				Name:     "metadata_options",
+				Type:     schema.TypeJSON,
+				Resolver: schema.PathResolver("MetadataOptions"),
 			},
 			{
 				Name:     "name",
@@ -129,6 +130,11 @@ func Instances() *schema.Table {
 				Name:     "support_code",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("SupportCode"),
+			},
+			{
+				Name:     "tags",
+				Type:     schema.TypeJSON,
+				Resolver: client.ResolveTags,
 			},
 			{
 				Name:     "username",

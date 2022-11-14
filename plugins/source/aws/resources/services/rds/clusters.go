@@ -9,9 +9,10 @@ import (
 
 func Clusters() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_rds_clusters",
-		Resolver:  fetchRdsClusters,
-		Multiplex: client.ServiceAccountRegionMultiplexer("rds"),
+		Name:        "aws_rds_clusters",
+		Description: `https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DBCluster.html`,
+		Resolver:    fetchRdsClusters,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("rds"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -277,6 +278,11 @@ func Clusters() *schema.Table {
 				Resolver: schema.PathResolver("MultiAZ"),
 			},
 			{
+				Name:     "network_type",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("NetworkType"),
+			},
+			{
 				Name:     "pending_modified_values",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("PendingModifiedValues"),
@@ -342,7 +348,7 @@ func Clusters() *schema.Table {
 				Resolver: schema.PathResolver("ScalingConfigurationInfo"),
 			},
 			{
-				Name:     "serverless_v_2_scaling_configuration",
+				Name:     "serverless_v2_scaling_configuration",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("ServerlessV2ScalingConfiguration"),
 			},
@@ -360,11 +366,6 @@ func Clusters() *schema.Table {
 				Name:     "storage_type",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("StorageType"),
-			},
-			{
-				Name:     "tag_list",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("TagList"),
 			},
 			{
 				Name:     "vpc_security_groups",

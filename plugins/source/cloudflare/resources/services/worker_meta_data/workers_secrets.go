@@ -12,9 +12,9 @@ func workersSecrets() *schema.Table {
 		Resolver: fetchWorkersSecrets,
 		Columns: []schema.Column{
 			{
-				Name:     "worker_meta_data_cq_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Name:     "worker_meta_data_id",
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "name",
@@ -22,7 +22,7 @@ func workersSecrets() *schema.Table {
 				Resolver: schema.PathResolver("Name"),
 			},
 			{
-				Name:     "type",
+				Name:     "secret_text",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("Type"),
 			},

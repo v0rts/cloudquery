@@ -13,8 +13,9 @@ import (
 
 func mongoDBDatabases() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_cosmosdb_mongo_db_databases",
-		Resolver: fetchCosmosDBMongoDBDatabases,
+		Name:        "azure_cosmosdb_mongo_db_databases",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/preview/cosmos-db/mgmt/2020-04-01-preview/documentdb#MongoDBDatabaseGetResults`,
+		Resolver:    fetchCosmosDBMongoDBDatabases,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func mongoDBDatabases() *schema.Table {
 			},
 			{
 				Name:     "cosmosdb_account_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "resource",

@@ -9,9 +9,10 @@ import (
 
 func Webhooks() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_codepipeline_webhooks",
-		Resolver:  fetchCodepipelineWebhooks,
-		Multiplex: client.ServiceAccountRegionMultiplexer("codepipeline"),
+		Name:        "aws_codepipeline_webhooks",
+		Description: `https://docs.aws.amazon.com/codepipeline/latest/APIReference/API_ListWebhookItem.html`,
+		Resolver:    fetchCodepipelineWebhooks,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("codepipeline"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -59,7 +60,7 @@ func Webhooks() *schema.Table {
 			{
 				Name:     "tags",
 				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("Tags"),
+				Resolver: client.ResolveTags,
 			},
 		},
 	}

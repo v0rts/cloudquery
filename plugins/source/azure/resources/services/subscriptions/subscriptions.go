@@ -11,15 +11,11 @@ import (
 
 func Subscriptions() *schema.Table {
 	return &schema.Table{
-		Name:      "azure_subscriptions",
-		Resolver:  fetchSubscriptionsSubscriptions,
-		Multiplex: client.SubscriptionMultiplex,
+		Name:        "azure_subscriptions",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions#Subscription`,
+		Resolver:    fetchSubscriptionsSubscriptions,
+		Multiplex:   client.SingleSubscriptionMultiplex,
 		Columns: []schema.Column{
-			{
-				Name:     "subscription_id",
-				Type:     schema.TypeString,
-				Resolver: client.ResolveAzureSubscription,
-			},
 			{
 				Name:     "authorization_source",
 				Type:     schema.TypeString,

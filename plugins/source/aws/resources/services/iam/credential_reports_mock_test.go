@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client/mocks"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/iam/models"
 	"github.com/golang/mock/gomock"
 	"github.com/rs/zerolog"
 )
@@ -28,7 +29,7 @@ func buildCredentialReports(_ *testing.T, ctrl *gomock.Controller) client.Servic
 		}, nil)
 
 	return client.Services{
-		IAM: m,
+		Iam: m,
 	}
 }
 
@@ -40,7 +41,7 @@ func buildCredentialReportsWithNilValues(ctrl *gomock.Controller) client.Service
 		}, nil)
 
 	return client.Services{
-		IAM: m,
+		Iam: m,
 	}
 }
 
@@ -62,9 +63,9 @@ func testCredentialReportsWithNilValues(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go func() {
-			got := make([]*CredentialReportEntry, 0, 3)
+			got := make([]*models.CredentialReportEntry, 0, 3)
 			for v := range res {
-				vals := v.([]*CredentialReportEntry)
+				vals := v.([]*models.CredentialReportEntry)
 				got = append(got, vals...)
 			}
 			if len(got) != 3 {

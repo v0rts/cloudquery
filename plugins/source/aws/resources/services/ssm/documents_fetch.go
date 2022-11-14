@@ -11,8 +11,8 @@ import (
 )
 
 func fetchSsmDocuments(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
-	cl := meta.(*client.Client)
-	svc := cl.Services().SSM
+	c := meta.(*client.Client)
+	svc := c.Services().Ssm
 
 	params := ssm.ListDocumentsInput{
 		Filters: []types.DocumentKeyValuesFilter{{Key: aws.String("Owner"), Values: []string{"Self"}}},
@@ -22,14 +22,8 @@ func fetchSsmDocuments(ctx context.Context, meta schema.ClientMeta, parent *sche
 		if err != nil {
 			return err
 		}
+		res <- output.DocumentIdentifiers
 
-		for _, d := range output.DocumentIdentifiers {
-			dd, err := svc.DescribeDocument(ctx, &ssm.DescribeDocumentInput{Name: d.Name})
-			if err != nil {
-				return err
-			}
-			res <- dd.Document
-		}
 		if aws.ToString(output.NextToken) == "" {
 			break
 		}
@@ -38,10 +32,24 @@ func fetchSsmDocuments(ctx context.Context, meta schema.ClientMeta, parent *sche
 	return nil
 }
 
+func getDocument(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Ssm
+	d := resource.Item.(types.DocumentIdentifier)
+
+	dd, err := svc.DescribeDocument(ctx, &ssm.DescribeDocumentInput{Name: d.Name})
+	if err != nil {
+		return err
+	}
+
+	resource.Item = dd.Document
+	return nil
+}
+
 func resolveDocumentPermission(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, col schema.Column) (exitErr error) {
 	d := resource.Item.(*types.DocumentDescription)
 	cl := meta.(*client.Client)
-	svc := cl.Services().SSM
+	svc := cl.Services().Ssm
 
 	input := ssm.DescribeDocumentPermissionInput{
 		Name:           d.Name,

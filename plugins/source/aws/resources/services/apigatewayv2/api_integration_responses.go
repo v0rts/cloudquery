@@ -9,9 +9,10 @@ import (
 
 func ApiIntegrationResponses() *schema.Table {
 	return &schema.Table{
-		Name:      "aws_apigatewayv2_api_integration_responses",
-		Resolver:  fetchApigatewayv2ApiIntegrationResponses,
-		Multiplex: client.ServiceAccountRegionMultiplexer("apigateway"),
+		Name:        "aws_apigatewayv2_api_integration_responses",
+		Description: `https://docs.aws.amazon.com/apigateway/latest/api/API_IntegrationResponse.html`,
+		Resolver:    fetchApigatewayv2ApiIntegrationResponses,
+		Multiplex:   client.ServiceAccountRegionMultiplexer("apigateway"),
 		Columns: []schema.Column{
 			{
 				Name:     "account_id",
@@ -26,12 +27,12 @@ func ApiIntegrationResponses() *schema.Table {
 			{
 				Name:     "api_integration_arn",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("arn"),
+				Resolver: schema.ParentColumnResolver("arn"),
 			},
 			{
 				Name:     "integration_id",
 				Type:     schema.TypeString,
-				Resolver: schema.ParentResourceFieldResolver("integration_id"),
+				Resolver: schema.ParentColumnResolver("integration_id"),
 			},
 			{
 				Name:     "arn",

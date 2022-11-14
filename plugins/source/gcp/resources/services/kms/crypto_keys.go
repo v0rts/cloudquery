@@ -18,6 +18,11 @@ func CryptoKeys() *schema.Table {
 				Resolver: client.ResolveProject,
 			},
 			{
+				Name:     "rotation_period",
+				Type:     schema.TypeInt,
+				Resolver: resolveRotationPeriod,
+			},
+			{
 				Name:     "name",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("Name"),
@@ -29,18 +34,18 @@ func CryptoKeys() *schema.Table {
 			},
 			{
 				Name:     "purpose",
-				Type:     schema.TypeInt,
-				Resolver: schema.PathResolver("Purpose"),
+				Type:     schema.TypeString,
+				Resolver: client.ResolveProtoEnum("Purpose"),
 			},
 			{
 				Name:     "create_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("CreateTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("CreateTime"),
 			},
 			{
 				Name:     "next_rotation_time",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("NextRotationTime"),
+				Type:     schema.TypeTimestamp,
+				Resolver: client.ResolveProtoTimestamp("NextRotationTime"),
 			},
 			{
 				Name:     "version_template",
@@ -59,8 +64,8 @@ func CryptoKeys() *schema.Table {
 			},
 			{
 				Name:     "destroy_scheduled_duration",
-				Type:     schema.TypeJSON,
-				Resolver: schema.PathResolver("DestroyScheduledDuration"),
+				Type:     schema.TypeInt,
+				Resolver: client.ResolveProtoDuration("DestroyScheduledDuration"),
 			},
 			{
 				Name:     "crypto_key_backend",

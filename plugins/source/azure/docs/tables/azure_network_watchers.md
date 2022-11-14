@@ -1,14 +1,25 @@
-
 # Table: azure_network_watchers
-Azure network watcher
+
+https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-11-01/network#Watcher
+
+The primary key for this table is **id**.
+
+## Relations
+The following tables depend on azure_network_watchers:
+  - [azure_network_flow_logs](azure_network_flow_logs.md)
+
 ## Columns
-| Name        | Type           | Description  |
-| ------------- | ------------- | -----  |
-|subscription_id|text|Azure subscription id|
-|etag|text|A unique read-only string that changes whenever the resource is updated|
-|provisioning_state|text|The provisioning state of the network watcher resource Possible values include: 'Succeeded', 'Updating', 'Deleting', 'Failed'|
-|id|text|Resource ID|
-|name|text|Resource name|
-|type|text|Resource type|
-|location|text|Resource location|
-|tags|jsonb|Resource tags|
+| Name          | Type          |
+| ------------- | ------------- |
+|_cq_source_name|String|
+|_cq_sync_time|Timestamp|
+|_cq_id|UUID|
+|_cq_parent_id|UUID|
+|subscription_id|String|
+|etag|String|
+|provisioning_state|String|
+|id (PK)|String|
+|name|String|
+|type|String|
+|location|String|
+|tags|JSON|

@@ -11,27 +11,8 @@ import (
 )
 
 func fetchSagemakerTrainingJobs(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
-	return client.ListAndDetailResolver(ctx, meta, res, listSagemakerTrainingJobs, sagemakerTrainingJobsDetail)
-}
-
-func sagemakerTrainingJobsDetail(ctx context.Context, meta schema.ClientMeta, resultsChan chan<- interface{}, errorChan chan<- error, detail interface{}) {
 	c := meta.(*client.Client)
-	svc := c.Services().SageMaker
-	n := detail.(types.TrainingJobSummary)
-	config := sagemaker.DescribeTrainingJobInput{
-		TrainingJobName: n.TrainingJobName,
-	}
-	response, err := svc.DescribeTrainingJob(ctx, &config)
-	if err != nil {
-		errorChan <- err
-		return
-	}
-	resultsChan <- response
-}
-
-func listSagemakerTrainingJobs(ctx context.Context, meta schema.ClientMeta, res chan<- interface{}) error {
-	c := meta.(*client.Client)
-	svc := c.Services().SageMaker
+	svc := c.Services().Sagemaker
 	config := sagemaker.ListTrainingJobsInput{}
 
 	for {
@@ -39,14 +20,27 @@ func listSagemakerTrainingJobs(ctx context.Context, meta schema.ClientMeta, res 
 		if err != nil {
 			return err
 		}
-		for _, d := range response.TrainingJobSummaries {
-			res <- d
-		}
+		res <- response.TrainingJobSummaries
 		if aws.ToString(response.NextToken) == "" {
 			break
 		}
 		config.NextToken = response.NextToken
 	}
+	return nil
+}
+
+func getTrainingJob(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Sagemaker
+	n := resource.Item.(types.TrainingJobSummary)
+	config := sagemaker.DescribeTrainingJobInput{
+		TrainingJobName: n.TrainingJobName,
+	}
+	response, err := svc.DescribeTrainingJob(ctx, &config)
+	if err != nil {
+		return err
+	}
+	resource.Item = response
 	return nil
 }
 
@@ -57,7 +51,7 @@ func resolveSagemakerTrainingJobTags(ctx context.Context, meta schema.ClientMeta
 	}
 
 	c := meta.(*client.Client)
-	svc := c.Services().SageMaker
+	svc := c.Services().Sagemaker
 	config := sagemaker.ListTagsInput{
 		ResourceArn: r.TrainingJobArn,
 	}
@@ -66,10 +60,5 @@ func resolveSagemakerTrainingJobTags(ctx context.Context, meta schema.ClientMeta
 		return err
 	}
 
-	tags := make(map[string]*string, len(response.Tags))
-	for _, t := range response.Tags {
-		tags[*t.Key] = t.Value
-	}
-
-	return resource.Set("tags", tags)
+	return resource.Set("tags", client.TagsToMap(response.Tags))
 }

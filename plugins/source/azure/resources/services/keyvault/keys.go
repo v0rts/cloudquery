@@ -13,8 +13,9 @@ import (
 
 func keys() *schema.Table {
 	return &schema.Table{
-		Name:     "azure_keyvault_keys",
-		Resolver: fetchKeyVaultKeys,
+		Name:        "azure_keyvault_keys",
+		Description: `https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/services/keyvault/v7.1/keyvault#KeyItem`,
+		Resolver:    fetchKeyVaultKeys,
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -23,8 +24,8 @@ func keys() *schema.Table {
 			},
 			{
 				Name:     "keyvault_vault_id",
-				Type:     schema.TypeUUID,
-				Resolver: schema.ParentIDResolver,
+				Type:     schema.TypeString,
+				Resolver: schema.ParentColumnResolver("id"),
 			},
 			{
 				Name:     "kid",
