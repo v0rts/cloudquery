@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/cloudquery/cloudquery/plugins/source/aws/codegen/recipes"
@@ -60,6 +61,7 @@ func generateResources() ([]*recipes.Resource, error) {
 	resources = append(resources, recipes.Inspector2Resources()...)
 	resources = append(resources, recipes.InspectorResources()...)
 	resources = append(resources, recipes.IOTResources()...)
+	resources = append(resources, recipes.KafkaResources()...)
 	resources = append(resources, recipes.KinesisResources()...)
 	resources = append(resources, recipes.KMSResources()...)
 	resources = append(resources, recipes.LambdaResources()...)
@@ -77,6 +79,7 @@ func generateResources() ([]*recipes.Resource, error) {
 	resources = append(resources, recipes.Route53Resources()...)
 	resources = append(resources, recipes.S3Resources()...)
 	resources = append(resources, recipes.SagemakerResources()...)
+	resources = append(resources, recipes.SchedulerResources()...)
 	resources = append(resources, recipes.SecretsManagerResources()...)
 	resources = append(resources, recipes.ServiceCatalogResources()...)
 	resources = append(resources, recipes.ServiceQuotasResources()...)
@@ -93,6 +96,11 @@ func generateResources() ([]*recipes.Resource, error) {
 	resources = append(resources, recipes.WAFv2Resources()...)
 	resources = append(resources, recipes.WorkspacesResources()...)
 	resources = append(resources, recipes.XRayResources()...)
+
+	err := recipes.SetParentChildRelationships(resources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set parent-child relationships: %w", err)
+	}
 	for _, resource := range resources {
 		if err := resource.Generate(); err != nil {
 			return nil, err
