@@ -4,6 +4,7 @@ package client
 import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/accessanalyzer"
+	"github.com/aws/aws-sdk-go-v2/service/account"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
@@ -80,6 +81,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/servicecatalogappregistry"
 	"github.com/aws/aws-sdk-go-v2/service/servicequotas"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
+	"github.com/aws/aws-sdk-go-v2/service/sfn"
 	"github.com/aws/aws-sdk-go-v2/service/shield"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -101,6 +103,7 @@ func initServices(region string, c aws.Config) Services {
 	awsCfg.Region = region
 	return Services{
 		Accessanalyzer:            accessanalyzer.NewFromConfig(awsCfg),
+		Account:                   account.NewFromConfig(awsCfg),
 		Acm:                       acm.NewFromConfig(awsCfg),
 		Apigateway:                apigateway.NewFromConfig(awsCfg),
 		Apigatewayv2:              apigatewayv2.NewFromConfig(awsCfg),
@@ -177,6 +180,7 @@ func initServices(region string, c aws.Config) Services {
 		Servicecatalogappregistry: servicecatalogappregistry.NewFromConfig(awsCfg),
 		Servicequotas:             servicequotas.NewFromConfig(awsCfg),
 		Sesv2:                     sesv2.NewFromConfig(awsCfg),
+		Sfn:                       sfn.NewFromConfig(awsCfg),
 		Shield:                    shield.NewFromConfig(awsCfg),
 		Sns:                       sns.NewFromConfig(awsCfg),
 		Sqs:                       sqs.NewFromConfig(awsCfg),
@@ -195,6 +199,7 @@ func initServices(region string, c aws.Config) Services {
 
 type Services struct {
 	Accessanalyzer            services.AccessanalyzerClient
+	Account                   services.AccountClient
 	Acm                       services.AcmClient
 	Apigateway                services.ApigatewayClient
 	Apigatewayv2              services.Apigatewayv2Client
@@ -271,6 +276,7 @@ type Services struct {
 	Servicecatalogappregistry services.ServicecatalogappregistryClient
 	Servicequotas             services.ServicequotasClient
 	Sesv2                     services.Sesv2Client
+	Sfn                       services.SfnClient
 	Shield                    services.ShieldClient
 	Sns                       services.SnsClient
 	Sqs                       services.SqsClient

@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudquery/plugin-sdk/schema"
 	"github.com/cloudquery/plugin-sdk/specs"
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v48/github"
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2"
 )
@@ -65,6 +65,7 @@ func Configure(ctx context.Context, logger zerolog.Logger, s specs.Source) (sche
 	return &Client{
 		logger: logger,
 		Github: GithubServices{
+			Actions:       c.Actions,
 			Teams:         c.Teams,
 			Billing:       c.Billing,
 			Repositories:  c.Repositories,

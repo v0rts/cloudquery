@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/aws/aws-sdk-go-v2/service/accessanalyzer"
+	"github.com/aws/aws-sdk-go-v2/service/account"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
@@ -78,6 +79,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/servicecatalogappregistry"
 	"github.com/aws/aws-sdk-go-v2/service/servicequotas"
 	"github.com/aws/aws-sdk-go-v2/service/sesv2"
+	"github.com/aws/aws-sdk-go-v2/service/sfn"
 	"github.com/aws/aws-sdk-go-v2/service/shield"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -94,6 +96,7 @@ import (
 
 var clients = []interface{}{
 	&accessanalyzer.Client{},
+	&account.Client{},
 	&acm.Client{},
 	&apigateway.Client{},
 	&apigatewayv2.Client{},
@@ -170,6 +173,7 @@ var clients = []interface{}{
 	&servicecatalogappregistry.Client{},
 	&servicequotas.Client{},
 	&sesv2.Client{},
+	&sfn.Client{},
 	&shield.Client{},
 	&sns.Client{},
 	&sqs.Client{},

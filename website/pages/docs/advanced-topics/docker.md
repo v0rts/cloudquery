@@ -6,7 +6,7 @@ import { Callout } from 'nextra-theme-docs'
 
 # Docker
 
-It is possible to use CloudQuery in an isolated container, you can pull the relevant image via `docker pull ghcr.io/cloudquery/cloudquery:latest`.
+It is possible to use CloudQuery in an isolated container. You can pull the relevant image via `docker pull ghcr.io/cloudquery/cloudquery:latest`.
 
 ## Configuration
 
@@ -38,7 +38,6 @@ docker run \
   -v <PATH TO CONFIG>/cloudquery.yml:/config/cloudquery.yml \
   ghcr.io/cloudquery/cloudquery:latest \
   fetch --config /config/cloudquery.yml \
-    --data-dir /cache/.cq
 ```
 
 <Callout type="info">

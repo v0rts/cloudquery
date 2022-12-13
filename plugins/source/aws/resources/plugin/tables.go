@@ -4,6 +4,7 @@ package plugin
 
 import (
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/accessanalyzer"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/account"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/acm"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/apigateway"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/apigatewayv2"
@@ -81,6 +82,7 @@ import (
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/sqs"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/ssm"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/ssoadmin"
+	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/stepfunctions"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/timestream"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/transfer"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/resources/services/waf"
@@ -94,6 +96,8 @@ import (
 func tables() []*schema.Table {
 	return []*schema.Table{
 		accessanalyzer.Analyzers(),
+		account.AlternateContacts(),
+		account.Contacts(),
 		acm.Certificates(),
 		apigateway.ApiKeys(),
 		apigateway.ClientCertificates(),
@@ -136,6 +140,7 @@ func tables() []*schema.Table {
 		cloudhsmv2.Clusters(),
 		cloudhsmv2.Backups(),
 		cloudtrail.Trails(),
+		cloudwatchlogs.ResourcePolicies(),
 		cloudwatchlogs.MetricFilters(),
 		cloudwatchlogs.LogGroups(),
 		cloudwatch.Alarms(),
@@ -146,6 +151,7 @@ func tables() []*schema.Table {
 		cognito.UserPools(),
 		config.ConfigurationRecorders(),
 		config.ConformancePacks(),
+		config.ConfigRules(),
 		dax.Clusters(),
 		directconnect.Connections(),
 		directconnect.Gateways(),
@@ -389,6 +395,7 @@ func tables() []*schema.Table {
 		ssm.InventorySchemas(),
 		ssm.PatchBaselines(),
 		ssoadmin.Instances(),
+		stepfunctions.StateMachines(),
 		timestream.Databases(),
 		transfer.Servers(),
 		wafregional.RateBasedRules(),

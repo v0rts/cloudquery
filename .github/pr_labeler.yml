@@ -2,12 +2,20 @@ aws:
   - plugins/source/aws/**/*
 azure:
   - plugins/source/azure/**/*
+azuredevops:
+  - plugins/source/azuredevops/**/*
 cloudflare:
   - plugins/source/cloudflare/**/*
+crowdstrike:
+  - plugins/source/crowdstrike/**/*
 digitalocean:
   - plugins/source/digitalocean/**/*
+datadog:
+  - plugins/source/datadog/**/*
 fuzz:
   - plugins/source/fuzz/**/*
+gandi:
+  - plugins/source/gandi/**/*
 gcp:
   - plugins/source/gcp/**/*
 github:
@@ -26,6 +34,10 @@ sqlite:
   - plugins/destination/sqlite/**/*
 csv:
   - plugins/destination/csv/**/*
+snowflake:
+  - plugins/destination/snowflake/**/*
+bigquery:
+  - plugins/destination/bigquery/**/*
 website:
   - website/**/*
 cli:

@@ -100,6 +100,12 @@ func IAMResources() []*Resource {
 					Type:     schema.TypeTimestamp,
 					Resolver: `timestampPathResolver("PasswordLastUsed")`,
 				},
+				// password_enabled is an alias for the (now deprecated) password_status - https://github.com/cloudquery/cloudquery/issues/3145
+				{
+					Name:     "password_enabled",
+					Type:     schema.TypeString,
+					Resolver: `schema.PathResolver("PasswordStatus")`,
+				},
 			},
 			Relations: []string{},
 		},
@@ -332,6 +338,7 @@ func IAMResources() []*Resource {
 				"UserGroups()",
 				"UserAttachedPolicies()",
 				"UserPolicies()",
+				"SshPublicKeys()",
 			},
 		},
 		{
@@ -439,6 +446,32 @@ func IAMResources() []*Resource {
 						Name:    "serial_number",
 						Type:    schema.TypeString,
 						Options: schema.ColumnCreationOptions{PrimaryKey: true},
+					},
+				}...),
+		},
+		{
+			SubService:  "ssh_public_keys",
+			Struct:      &types.SSHPublicKeyMetadata{},
+			Description: "https://docs.aws.amazon.com/IAM/latest/APIReference/API_SSHPublicKeyMetadata.html",
+			SkipFields:  []string{"SSHPublicKeyId"},
+			ExtraColumns: append(
+				defaultAccountColumns,
+				[]codegen.ColumnDefinition{
+					{
+						Name:     "user_arn",
+						Type:     schema.TypeString,
+						Resolver: `schema.ParentColumnResolver("arn")`,
+					},
+					{
+						Name:     "user_id",
+						Type:     schema.TypeString,
+						Resolver: `schema.ParentColumnResolver("id")`,
+					},
+					{
+						Name:     "ssh_public_key_id",
+						Type:     schema.TypeString,
+						Resolver: `schema.PathResolver("SSHPublicKeyId")`,
+						Options:  schema.ColumnCreationOptions{PrimaryKey: true},
 					},
 				}...),
 		},

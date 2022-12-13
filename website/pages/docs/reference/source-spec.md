@@ -1,19 +1,19 @@
 # Source Spec Reference
 
-Following are available options for the top level source plugin `spec` object. 
+Following are available options for the top level source plugin `spec` object.
 
-Note: For configuring individual plugins, please refer to the configuration section from the relevant plugins from [here](https://www.cloudquery.io/docs/plugins/sources). (e.g. [AWS plugin configuration](https://github.com/cloudquery/cloudquery/blob/main/plugins/source/aws/docs/configuration.md)). Also check out our [recipes](https://www.cloudquery.io/docs/recipes/overview) for common configuration examples.
+Note: For configuring individual plugins, please refer to the configuration section from the relevant plugins from [here](/docs/plugins/sources/overview). (e.g. [AWS plugin configuration](/docs/plugins/sources/aws/configuration)).
 
 ## Example
 
 This example configures the AWS plugin, and connects is to a `postgresql` destination:
 
-```yaml copy
+```yaml
 kind: source
 spec:
   name: "aws"
   path: "cloudquery/aws"
-  version: "v7.0.1" # latest version of aws plugin
+  version: "VERSION_SOURCE_AWS"
   tables: ["*"]
   destinations: ["postgresql"]
 
@@ -82,4 +82,4 @@ A best effort maximum number of Go routines to use. Lower this number to reduce 
 
 (`object`, optional)
 
-Plugin specific configurations. Visit [source plugins](/docs/plugins/sources) documentation for more information.
+Plugin specific configurations. Visit [source plugins](/docs/plugins/sources/overview) documentation for more information.
