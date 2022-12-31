@@ -4,9 +4,8 @@ https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_ListSecrets.h
 
 The primary key for this table is **arn**.
 
-
-
 ## Columns
+
 | Name          | Type          |
 | ------------- | ------------- |
 |_cq_source_name|String|
@@ -25,6 +24,7 @@ The primary key for this table is **arn**.
 |last_changed_date|Timestamp|
 |last_rotated_date|Timestamp|
 |name|String|
+|next_rotation_date|Timestamp|
 |owning_service|String|
 |primary_region|String|
 |replication_status|JSON|

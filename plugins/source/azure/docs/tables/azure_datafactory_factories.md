@@ -1,12 +1,9 @@
 # Table: azure_datafactory_factories
 
-
-
 The primary key for this table is **id**.
 
-
-
 ## Columns
+
 | Name          | Type          |
 | ------------- | ------------- |
 |_cq_source_name|String|
@@ -19,7 +16,7 @@ The primary key for this table is **id**.
 |location|String|
 |properties|JSON|
 |tags|JSON|
-|e_tag|String|
+|etag|String|
 |id (PK)|String|
 |name|String|
 |type|String|

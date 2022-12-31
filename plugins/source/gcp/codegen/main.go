@@ -15,6 +15,7 @@ import (
 
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
+	"github.com/cloudquery/plugins/source/gcp/client"
 	"github.com/cloudquery/plugins/source/gcp/codegen/recipes"
 	"github.com/iancoleman/strcase"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -24,8 +25,6 @@ import (
 
 //go:embed templates/*.go.tpl
 var gcpTemplatesFS embed.FS
-
-
 
 func main() {
 
@@ -68,12 +67,84 @@ func generatePlugin(rr []*recipes.Resource) {
 }
 
 func needsProjectIDColumn(r recipes.Resource) bool {
-	for _, c := range r.ExtraColumns {
-		if c.Name == "project_id" {
-			return false
+	return r.Multiplex != &recipes.OrgMultiplex
+}
+
+func InferListFunction(r *recipes.Resource) {
+	// We can infer the List function by matching a list function that return the same struct as r.Struct
+	server := reflect.TypeOf(r.RegisterServer).In(1)
+	for i := 0; i < server.NumMethod(); i++ {
+		method := server.Method(i)
+		if strings.HasPrefix(method.Name, "List") {
+			response := method.Type.Out(0).Elem()
+			for j := 0; j < response.NumField(); j++ {
+				field := response.Field(j)
+				kind := field.Type.Kind()
+				if kind != reflect.Slice {
+					continue
+				}
+				if field.Type.Elem() == reflect.TypeOf(r.Struct) {
+					r.ListFunctionName = method.Name
+					r.RequestStructName = method.Type.In(1).Elem().Name()
+					r.ResponseStructName = method.Type.Out(0).Elem().Name()
+					return
+				}
+			}
 		}
 	}
-	return true
+}
+
+func getColumn(columns codegen.ColumnDefinitions, name string) *codegen.ColumnDefinition {
+	for i := range columns {
+		if columns[i].Name == name {
+			return &columns[i]
+		}
+	}
+	return nil
+}
+
+func listMethodSignature(method reflect.Method) string {
+	t := method.Type
+	buf := strings.Builder{}
+	buf.WriteString(method.Name + "(")
+	buf.WriteString(t.In(0).String())
+	buf.WriteString(", ")
+	buf.WriteString(t.In(1).String())
+	buf.WriteString(")")
+	buf.WriteString(" (")
+	buf.WriteString(t.Out(0).String())
+	buf.WriteString(", ")
+	buf.WriteString(t.Out(1).String())
+	buf.WriteString(")")
+	return buf.String()
+}
+
+func isValidListMethod(method reflect.Method) bool {
+	if !strings.HasPrefix(method.Name, "List") {
+		return false
+	}
+
+	_, responseHasNextPage := method.Type.Out(0).Elem().FieldByName("NextPageToken")
+	return responseHasNextPage
+}
+
+func generateMockTestData(r *recipes.Resource) {
+	registerServerPath := runtime.FuncForPC(reflect.ValueOf(r.RelationsTestData.RegisterServer).Pointer()).Name()
+	serverName := strings.Split(registerServerPath, "/")[4]
+	pbName := strings.Split(serverName, ".")[0]
+	pbPath := strings.Split(registerServerPath, pbName)[0]
+	r.RelationsTestData.ProtobufImport = fmt.Sprintf("%s%s", pbPath, pbName)
+	r.RelationsTestData.RegisterServerName = serverName
+	r.RelationsTestData.UnimplementedServerName = strings.Replace(serverName, "Register", "Unimplemented", 1)
+	server := reflect.TypeOf(r.RelationsTestData.RegisterServer).In(1)
+	for i := 0; i < server.NumMethod(); i++ {
+		method := server.Method(i)
+		if isValidListMethod(method) {
+			sig := listMethodSignature(method)
+			responseType := method.Type.Out(0).Elem().String()
+			r.RelationsTestData.ListFunctions = append(r.RelationsTestData.ListFunctions, recipes.ListFunctions{Signature: sig, ResponseStructName: responseType})
+		}
+	}
 }
 
 func generateResource(r recipes.Resource, mock bool) {
@@ -88,34 +159,53 @@ func generateResource(r recipes.Resource, mock bool) {
 		path := strings.Split(runtime.FuncForPC(reflect.ValueOf(r.NewFunction).Pointer()).Name(), ".")
 		r.NewFunctionName = path[len(path)-1]
 	}
+
 	if r.RegisterServer != nil {
 		path := strings.Split(runtime.FuncForPC(reflect.ValueOf(r.RegisterServer).Pointer()).Name(), ".")
 		r.RegisterServerName = path[len(path)-1]
+		r.UnimplementedServerName = strings.Replace(r.RegisterServerName, "Register", "Unimplemented", 1)
+
 	}
-	if r.ResponseStruct != nil {
-		r.ResponseStructName = reflect.TypeOf(r.ResponseStruct).Elem().Name()
-	}
-	if r.RequestStruct != nil {
-		r.RequestStructName = reflect.TypeOf(r.RequestStruct).Elem().Name()
-	}
-	if r.UnimplementedServer != nil {
-		r.UnimplementedServerName = reflect.TypeOf(r.UnimplementedServer).Elem().Name()
-	}
+
 	if r.ClientName == "" && r.NewFunctionName != "" {
 		n := strings.Split(fmt.Sprintf("%v", reflect.TypeOf(r.NewFunction).Out(0)), ".")[1]
 		r.ClientName = n
 	}
 
-	if r.ListFunction != nil {
-		path := strings.Split(runtime.FuncForPC(reflect.ValueOf(r.ListFunction).Pointer()).Name(), ".")
-		r.ListFunctionName = path[len(path)-1]
-		// https://stackoverflow.com/questions/32925344/why-is-there-a-fm-suffix-when-getting-a-functions-name-in-go
-		r.ListFunctionName = strings.Split(r.ListFunctionName, "-")[0]
-	}
-
 	if r.StructName == "" {
 		r.StructName = reflect.TypeOf(r.Struct).Elem().Name()
 	}
+
+	if !r.SkipFetch {
+		if r.ListFunction == nil {
+			InferListFunction(&r)
+		} else {
+			path := strings.Split(runtime.FuncForPC(reflect.ValueOf(r.ListFunction).Pointer()).Name(), ".")
+			r.ListFunctionName = path[len(path)-1]
+			// https://stackoverflow.com/questions/32925344/why-is-there-a-fm-suffix-when-getting-a-functions-name-in-go
+			r.ListFunctionName = strings.Split(r.ListFunctionName, "-")[0]
+			r.RequestStructName = reflect.TypeOf(r.ListFunction).In(1).Elem().Name()
+			switch {
+			case r.RegisterServer != nil:
+				server := reflect.TypeOf(r.RegisterServer).In(1)
+				method, _ := server.MethodByName(r.ListFunctionName)
+				r.ResponseStructName = method.Type.Out(0).Elem().Name()
+			case r.ListFunctionName == "Get":
+				r.ResponseStructName = r.StructName
+			default:
+				r.ResponseStructName = r.StructName + r.ListFunctionName
+			}
+		}
+	}
+
+	if mock && r.RelationsTestData.RegisterServer != nil {
+		generateMockTestData(&r)
+	}
+
+	if r.ResponseStruct != nil {
+		r.ResponseStructName = reflect.TypeOf(r.ResponseStruct).Elem().Name()
+	}
+
 	if r.MockListStruct == "" {
 		r.MockListStruct = strcase.ToCamel(r.StructName)
 	}
@@ -124,13 +214,9 @@ func generateResource(r recipes.Resource, mock bool) {
 		r.MockImports = []string{reflect.TypeOf(r.Struct).Elem().PkgPath()}
 	}
 
-	for _, f := range r.ExtraColumns {
-		r.SkipFields = append(r.SkipFields, strcase.ToCamel(f.Name))
-	}
-
 	extraColumns := r.ExtraColumns
 	if needsProjectIDColumn(r) {
-		extraColumns = append([]codegen.ColumnDefinition{recipes.ProjectIdColumn}, extraColumns...)
+		extraColumns = append([]codegen.ColumnDefinition{recipes.ProjectIdColumn}, r.ExtraColumns...)
 	}
 
 	opts := []codegen.TableOption{
@@ -179,10 +265,33 @@ func generateResource(r recipes.Resource, mock bool) {
 		log.Fatal(fmt.Errorf("failed to create table for %s: %w", r.StructName, err))
 	}
 	if r.Multiplex == nil {
-		r.Table.Multiplex = "client.ProjectMultiplex"
+		if r.ServiceDNS == "" {
+			r.ServiceDNS = r.Service + ".googleapis.com"
+		}
+		if _, ok := client.GcpServices[r.ServiceDNS]; !ok {
+			panic("unknown service DNS: " + r.ServiceDNS)
+		}
+		r.Table.Multiplex = "client.ProjectMultiplexEnabledServices(\"" + r.ServiceDNS + "\")"
 	} else {
 		r.Table.Multiplex = *r.Multiplex
 	}
+
+	for _, f := range r.PrimaryKeys {
+		column := getColumn(r.Table.Columns, f)
+		if column != nil {
+			column.Options.PrimaryKey = true
+		}
+	}
+
+	for _, f := range r.IgnoreInTestsColumns {
+		column := getColumn(r.Table.Columns, f)
+		if column != nil {
+			column.IgnoreInTests = true
+		}
+	}
+
+	r.Table.Description = r.Description
+
 	r.Table.Resolver = "fetch" + strcase.ToCamel(r.SubService)
 	if r.PreResourceResolver != "" {
 		r.Table.PreResourceResolver = r.PreResourceResolver

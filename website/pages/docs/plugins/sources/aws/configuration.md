@@ -57,6 +57,7 @@ spec:
 
 ## AWS Organization Example
 
+CloudQuery supports discovery of AWS Accounts via AWS Organizations. This means that as Accounts get added or removed from your organization CloudQuery will be able to handle new or removed accounts without any configuration changes.
 
 ```yaml
 kind: source
@@ -77,92 +78,7 @@ spec:
       - '*'
   ```
 
-
-CloudQuery supports discovery of AWS Accounts via AWS Organizations. This means that as Accounts get added or removed from your organization CloudQuery will be able to handle new or removed accounts without any configuration changes.
-
-Prerequisites for using AWS Org functionality:
-1. Have a role (or user) in an Admin account with the following access:
-
-  - `organizations:ListAccounts`
-  - `organizations:ListAccountsForParent`
-  - `organizations:ListChildren`
-
-2. Have a role in each member account that has a trust policy with a single principal. The default profile name is `OrganizationAccountAccessRole`. More information can be found [here](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_accounts_access.html#orgs_manage_accounts_create-cross-account-role), including how to create the role if it doesn't already exist in your account.
-
-
-
-
-
-
-Using AWS Organization:
-1. Specify member role name:
-
-```yaml copy
-    org:
-      member_role_name: OrganizationAccountAccessRole
-```
-
-2. Getting credentials that have  the necessary `organizations` permissions:
-
-    1. Sourcing Credentials from the default credential tool chain:
-    ```yaml copy
-        org:
-          member_role_name: OrganizationAccountAccessRole
-    ```
-
-    2. Sourcing credentials from a named profile in the shared configuration or credentials file
-
-    ```yaml copy
-        org:
-          member_role_name: OrganizationAccountAccessRole
-          admin_account:
-            local_profile: <Named-Profile>
-    ```
-
-    3. Assuming a role in admin account using credentials in the shared configuration or credentials file:
-
-    ```yaml copy
-        org:
-          member_role_name: OrganizationAccountAccessRole
-          admin_account:
-            local_profile: <Named-Profile>
-            role_arn: arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
-            
-            // Optional. Specify the name of the session 
-            // role_session_name: ""
-
-            // Optional. Specify the ExternalID if required for trust policy 
-            // external_id: ""
-    ```
-
-3. Optional. If the trust policy configured for the member accounts requires different credentials than you configured in the previous step, then you can specify the credentials to use in the `member_trusted_principal` block 
-
-```yaml copy
-    org:
-      member_role_name: OrganizationAccountAccessRole
-      admin_account:
-        local_profile: <Named-Profile-Admin>
-      member_trusted_principal:
-        local_profile: <Named-Profile-Member>
-      organization_units:
-        - ou-<ID-1>
-        - ou-<ID-2>
-```
-
-4. Optional. If you want to specify specific Organizational Units to fetch from you can add them to the `organization_units` list. 
-
-```yaml copy
-    org:
-      member_role_name: OrganizationAccountAccessRole
-      admin_account:
-        local_profile: <Named-Profile-Admin>
-      organization_units:
-        - ou-<ID-1>
-        - ou-<ID-2>
-```
-
-
-
+For full details, see the [Multi Account Configuration Tutorial](/docs/plugins/sources/aws/multi-account).
 
 ## AWS Spec
 
@@ -183,6 +99,31 @@ This is the (nested) spec used by the AWS source plugin.
 - `aws_debug` (bool) (default: false)
 
   If true, will log AWS debug logs, including retries and other request/response metadata
+
+- `max_retries` (int) (default: 10)
+
+  Defines the maximum number of times an API request will be retried 
+
+- `max_backoff` (int) (default: 30)
+  
+  Defines the duration between retry attempts
+
+- `custom_endpoint_url` (string) (default: not used)
+
+  The base URL endpoint the SDK API clients will use to make API calls to. The SDK will suffix URI path and query elements to this endpoint
+
+- `custom_endpoint_hostname_immutable` (bool) (default: not used)
+
+  Specifies if the endpoint's hostname can be modified by the SDK's API client. When using something like LocalStack make sure to set it equal to `True`
+
+- `custom_endpoint_partition_id` (string) (default: not used)
+
+  The AWS partition the endpoint belongs to
+
+- `custom_endpoint_signing_region` (string) (default: not used)
+
+  The region that should be used for signing the request to the endpoint
+
 
 ## accounts
 
@@ -232,10 +173,6 @@ This is used to specify one or more accounts to extract information from. Note t
 
 ## org
 
-- `organization_units` ([]string)
-
-  List of Organizational Units that CloudQuery should use to source accounts from. If you specify an OU, CloudQuery will not traverse nested OUs
-
 - `admin_account` ([Account](#account))
 
   Configuration for how to grab credentials from an Admin account
@@ -259,3 +196,15 @@ This is used to specify one or more accounts to extract information from. Note t
 - `member_regions` ([]string)
 
   Limit fetching resources within this specific account to only these regions. This will override any regions specified in the provider block. You can specify all regions by using the `*` character as the only argument in the array
+
+- `organization_units` ([]string)
+
+  List of Organizational Units that CloudQuery should use to source accounts from. If you specify an OU, CloudQuery will not traverse nested OUs
+
+- `skip_organization_units` ([]string)
+
+  List of Organizational Units to skip. This is useful in conjunction with `organization_units` if there are child OUs that should be ignored.
+
+- `skip_member_accounts` ([]string)
+
+  List of OU member accounts to skip. This is useful in conjunction with `organization_units` if there are accounts under the selected OUs that should be ignored.

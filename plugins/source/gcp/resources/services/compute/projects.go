@@ -11,19 +11,12 @@ func Projects() *schema.Table {
 	return &schema.Table{
 		Name:      "gcp_compute_projects",
 		Resolver:  fetchProjects,
-		Multiplex: client.ProjectMultiplex,
+		Multiplex: client.ProjectMultiplexEnabledServices("compute.googleapis.com"),
 		Columns: []schema.Column{
 			{
 				Name:     "project_id",
 				Type:     schema.TypeString,
 				Resolver: client.ResolveProject,
-			},
-			{
-				Name: "self_link",
-				Type: schema.TypeString,
-				CreationOptions: schema.ColumnCreationOptions{
-					PrimaryKey: true,
-				},
 			},
 			{
 				Name:     "common_instance_metadata",
@@ -74,6 +67,14 @@ func Projects() *schema.Table {
 				Name:     "quotas",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("Quotas"),
+			},
+			{
+				Name:     "self_link",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("SelfLink"),
+				CreationOptions: schema.ColumnCreationOptions{
+					PrimaryKey: true,
+				},
 			},
 			{
 				Name:     "usage_export_location",

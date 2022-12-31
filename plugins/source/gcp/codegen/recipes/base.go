@@ -4,13 +4,28 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/cloudquery/plugin-sdk/caser"
 	"github.com/cloudquery/plugin-sdk/codegen"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
 
 var Resources []*Resource
 
+type ListFunctions struct {
+	ResponseStructName string
+	Signature          string
+}
+
+type RelationsTestData struct {
+	RegisterServer          any
+	RegisterServerName      string
+	UnimplementedServerName string
+	ListFunctions           []ListFunctions
+	ProtobufImport          string
+}
+
 type Resource struct {
+	Description string
 	// PackageName name is the packgename in the source plugin this resource is located
 	PackageName string
 	// Sets PreResourceResolver
@@ -18,39 +33,39 @@ type Resource struct {
 	// Table is the table definition that will be used to generate the cloudquery table
 	Table *codegen.TableDefinition
 	// Struct that will be used to generate the cloudquery table
-	Struct interface{}
+	Struct any
 	// StructName is the name of the Struct because it can't be inferred by reflection
 	StructName string
+	// Service DNS
+	ServiceDNS string
 	// Service is the name of the gcp service the struct/api is residing
 	Service string
 	// SubService is the name of the gcp subservice the struct/api is residing (gcp is split into service.subservice.list)
 	SubService string
 	// NewFunction
-	NewFunction interface{}
+	NewFunction any
 	// NewFunctionName name of the above function via Reflection
 	NewFunctionName string
 	// ClientName name of the above client via Reflection
 	ClientName string
 	// ListFunction
-	ListFunction interface{}
+	ListFunction any
 	// ListFunction name of the above function via Reflection
 	ListFunctionName string
-	// RequestStruct fills the request struct for google api
-	RequestStruct interface{}
 	// RequestStructName
 	RequestStructName string
 	// RequestStructFields is the snippet that fills in the request struct
 	RequestStructFields string
 	// ResponseStruct
-	ResponseStruct interface{}
+	ResponseStruct any
 	// ResponseStructName is reflected name from the ResponseStruct
 	ResponseStructName string
 	// RegisterServer function to grpc register server
-	RegisterServer interface{}
+	RegisterServer any
 	// RegisterServerName is the name of the above function via Reflection
 	RegisterServerName string
-	// UnimplementedServer is the unimplemented server for the grpc server
-	UnimplementedServer interface{}
+	// RelationsTestData has relations data used for creating tests
+	RelationsTestData RelationsTestData
 	// UnimplementedServerName is the name of the above function via Reflection
 	UnimplementedServerName string
 	// OutputField is field where the result is located in the output struct
@@ -80,11 +95,16 @@ type Resource struct {
 	// Don't generate fetch
 	SkipFetch bool
 	// SkipFields fields in go struct to skip when generating the table from the go struct
-	SkipFields []string
-	// ExtraColumns override, override generated columns
+	SkipFields   []string
+	PrimaryKeys  []string
 	ExtraColumns []codegen.ColumnDefinition
 	// NameTransformer custom name transformer for resource
 	NameTransformer func(field reflect.StructField) (string, error)
+	// ClientOptions is a list of options to pass to the client
+	ClientOptions []string
+	// IgnoreInTestsColumns is a list of columns to ignore in tests
+	IgnoreInTestsColumns []string
+	ParentFilterFunc     string
 }
 
 var ProjectIdColumn = codegen.ColumnDefinition{
@@ -93,12 +113,7 @@ var ProjectIdColumn = codegen.ColumnDefinition{
 	Resolver: "client.ResolveProject",
 }
 
-var ProjectIdColumnPk = codegen.ColumnDefinition{
-	Name:     "project_id",
-	Type:     schema.TypeString,
-	Resolver: "client.ResolveProject",
-	Options:  schema.ColumnCreationOptions{PrimaryKey: true},
-}
+var Caser = caser.New()
 
 func CreateReplaceTransformer(replace map[string]string) func(field reflect.StructField) (string, error) {
 	return func(field reflect.StructField) (string, error) {

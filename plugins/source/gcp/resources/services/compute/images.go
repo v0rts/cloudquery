@@ -18,19 +18,12 @@ func Images() *schema.Table {
 	return &schema.Table{
 		Name:      "gcp_compute_images",
 		Resolver:  fetchImages,
-		Multiplex: client.ProjectMultiplex,
+		Multiplex: client.ProjectMultiplexEnabledServices("compute.googleapis.com"),
 		Columns: []schema.Column{
 			{
 				Name:     "project_id",
 				Type:     schema.TypeString,
 				Resolver: client.ResolveProject,
-			},
-			{
-				Name: "self_link",
-				Type: schema.TypeString,
-				CreationOptions: schema.ColumnCreationOptions{
-					PrimaryKey: true,
-				},
 			},
 			{
 				Name:     "architecture",
@@ -123,6 +116,14 @@ func Images() *schema.Table {
 				Resolver: schema.PathResolver("SatisfiesPzs"),
 			},
 			{
+				Name:     "self_link",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("SelfLink"),
+				CreationOptions: schema.ColumnCreationOptions{
+					PrimaryKey: true,
+				},
+			},
+			{
 				Name:     "shielded_instance_initial_state",
 				Type:     schema.TypeJSON,
 				Resolver: schema.PathResolver("ShieldedInstanceInitialState"),
@@ -191,7 +192,7 @@ func Images() *schema.Table {
 	}
 }
 
-func fetchImages(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
+func fetchImages(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
 	c := meta.(*client.Client)
 	req := &pb.ListImagesRequest{
 		Project: c.ProjectId,

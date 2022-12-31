@@ -17,7 +17,6 @@ func init() {
 			ChildTable: true,
 			SkipMock:   true,
 			SkipFetch:  true,
-			SkipFields: []string{"RotationSchedule"},
 			ExtraColumns: codegen.ColumnDefinitions{
 				{
 					Name:     "rotation_period",
@@ -25,13 +24,15 @@ func init() {
 					Resolver: "resolveRotationPeriod",
 				},
 			},
+			Description: "https://cloud.google.com/kms/docs/reference/rest/v1/projects.locations.keyRings.cryptoKeys#CryptoKey",
 		},
 		{
-			SubService: "keyrings",
-			Struct:     &kmspb.KeyRing{},
-			Relations:  []string{"CryptoKeys()"},
-			SkipFetch:  true,
-			SkipMock:   true,
+			SubService:  "keyrings",
+			Struct:      &kmspb.KeyRing{},
+			Relations:   []string{"CryptoKeys()"},
+			SkipFetch:   true,
+			SkipMock:    true,
+			Description: "https://cloud.google.com/kms/docs/reference/rest/v1/projects.locations.keyRings#KeyRing",
 		},
 	}
 
@@ -41,6 +42,7 @@ func init() {
 		resource.ProtobufImport = "cloud.google.com/go/kms/apiv1/kmspb"
 		resource.Template = "newapi_list"
 		resource.MockTemplate = "newapi_list_grpc_mock"
+		resource.ServiceDNS = "cloudkms.googleapis.com"
 	}
 
 	Resources = append(Resources, resources...)

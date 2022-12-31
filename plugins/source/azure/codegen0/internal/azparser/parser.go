@@ -29,6 +29,14 @@ var newFuncToSkipPerPackage = map[string]map[string]bool{
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mysql/armmysql": {
 		"NewServersClient": true,
 	},
+	// seems this api is not working and always returning InvalidResourceType
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/sql/armsql": {
+		"NewDeletedServersClient": true,
+	},
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute": {
+		// we migrated this to manual written client as it has childs
+		"NewVirtualMachinesClient": true,
+	},
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/cosmos/armcosmos": {
 		"NewDatabaseAccountsClient": true,
 	},
@@ -299,7 +307,7 @@ func CreateTablesFromPackage(pkg string) ([]*Table, error) {
 		t.ResponseStruct = pagerMethod.returnTypes[0]
 		namespaceMatches := reNamespaceFromURL.FindStringSubmatch(azURL)
 		if len(namespaceMatches) == 2 {
-			t.Namespace = namespaceMatches[1]
+			t.Namespace = strings.ToLower(namespaceMatches[1])
 			t.Multiplex = fmt.Sprintf("client.SubscriptionMultiplexRegisteredNamespace(client.Namespace%s)", strings.ReplaceAll(t.Namespace, ".", "_"))
 		} else {
 			t.Multiplex = "client.SubscriptionMultiplex"

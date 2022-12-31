@@ -5,21 +5,16 @@ import (
 	"cloud.google.com/go/functions/apiv1/functionspb"
 )
 
-
-
 func init() {
 	resources := []*Resource{
 		{
 			SubService:          "functions",
 			Struct:              &functionspb.CloudFunction{},
 			NewFunction:         functions.NewCloudFunctionsClient,
-			RequestStruct:       &functionspb.ListFunctionsRequest{},
-			ResponseStruct:      &functionspb.ListFunctionsResponse{},
 			RegisterServer:      functionspb.RegisterCloudFunctionsServiceServer,
-			ListFunction:        (&functionspb.UnimplementedCloudFunctionsServiceServer{}).ListFunctions,
 			RequestStructFields: `Parent: "projects/" + c.ProjectId + "/locations/-",`,
-			UnimplementedServer: &functionspb.UnimplementedCloudFunctionsServiceServer{},
 			SkipFields:          []string{"SourceCode", "Trigger"},
+			Description:         "https://cloud.google.com/functions/docs/reference/rest/v1/projects.locations.functions#CloudFunction",
 		},
 	}
 
@@ -28,7 +23,8 @@ func init() {
 		resource.Template = "newapi_list"
 		resource.MockTemplate = "newapi_list_grpc_mock"
 		resource.MockImports = []string{"cloud.google.com/go/functions/apiv1"}
-		resource.ProtobufImport = "google.golang.org/genproto/googleapis/cloud/functions/v1"
+		resource.ProtobufImport = "cloud.google.com/go/functions/apiv1/functionspb"
+		resource.ServiceDNS = "cloudfunctions.googleapis.com"
 	}
 
 	Resources = append(Resources, resources...)

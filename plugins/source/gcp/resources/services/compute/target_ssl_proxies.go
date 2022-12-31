@@ -18,19 +18,12 @@ func TargetSslProxies() *schema.Table {
 	return &schema.Table{
 		Name:      "gcp_compute_target_ssl_proxies",
 		Resolver:  fetchTargetSslProxies,
-		Multiplex: client.ProjectMultiplex,
+		Multiplex: client.ProjectMultiplexEnabledServices("compute.googleapis.com"),
 		Columns: []schema.Column{
 			{
 				Name:     "project_id",
 				Type:     schema.TypeString,
 				Resolver: client.ResolveProject,
-			},
-			{
-				Name: "self_link",
-				Type: schema.TypeString,
-				CreationOptions: schema.ColumnCreationOptions{
-					PrimaryKey: true,
-				},
 			},
 			{
 				Name:     "certificate_map",
@@ -68,6 +61,14 @@ func TargetSslProxies() *schema.Table {
 				Resolver: schema.PathResolver("ProxyHeader"),
 			},
 			{
+				Name:     "self_link",
+				Type:     schema.TypeString,
+				Resolver: schema.PathResolver("SelfLink"),
+				CreationOptions: schema.ColumnCreationOptions{
+					PrimaryKey: true,
+				},
+			},
+			{
 				Name:     "service",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("Service"),
@@ -86,7 +87,7 @@ func TargetSslProxies() *schema.Table {
 	}
 }
 
-func fetchTargetSslProxies(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
+func fetchTargetSslProxies(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
 	c := meta.(*client.Client)
 	req := &pb.ListTargetSslProxiesRequest{
 		Project: c.ProjectId,

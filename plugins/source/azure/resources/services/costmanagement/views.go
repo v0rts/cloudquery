@@ -2,8 +2,6 @@
 package costmanagement
 
 import (
-	"context"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/costmanagement/armcostmanagement"
 	"github.com/cloudquery/cloudquery/plugins/source/azure/client"
 	"github.com/cloudquery/plugin-sdk/schema"
 )
@@ -12,7 +10,7 @@ func Views() *schema.Table {
 	return &schema.Table{
 		Name:      "azure_costmanagement_views",
 		Resolver:  fetchViews,
-		Multiplex: client.SubscriptionMultiplexRegisteredNamespace(client.NamespaceMicrosoft_CostManagement),
+		Multiplex: client.SubscriptionMultiplexRegisteredNamespace(client.Namespacemicrosoft_costmanagement),
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -20,7 +18,7 @@ func Views() *schema.Table {
 				Resolver: client.ResolveAzureSubscription,
 			},
 			{
-				Name:     "e_tag",
+				Name:     "etag",
 				Type:     schema.TypeString,
 				Resolver: schema.PathResolver("ETag"),
 			},
@@ -48,22 +46,9 @@ func Views() *schema.Table {
 				Resolver: schema.PathResolver("Type"),
 			},
 		},
-	}
-}
 
-func fetchViews(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- interface{}) error {
-	cl := meta.(*client.Client)
-	svc, err := armcostmanagement.NewViewsClient(cl.Creds, cl.Options)
-	if err != nil {
-		return err
+		Relations: []*schema.Table{
+			view_queries(),
+		},
 	}
-	pager := svc.NewListPager(nil)
-	for pager.More() {
-		p, err := pager.NextPage(ctx)
-		if err != nil {
-			return err
-		}
-		res <- p.Value
-	}
-	return nil
 }
