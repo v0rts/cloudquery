@@ -26,12 +26,20 @@ gitlab:
   - plugins/source/gitlab/**/*
 k8s:
   - plugins/source/k8s/**/*
+hackernews:
+  - plugins/source/hackernews/**/*
 heroku:
   - plugins/source/heroku/**/*
 okta:
   - plugins/source/okta/**/*
+oracle:
+  - plugins/source/oracle/**/*
 slack:
   - plugins/source/slack/**/*
+shopify:
+  - plugins/source/shopify/**/*
+stripe:
+  - plugins/source/stripe/**/*
 pagerduty:
   - plugins/source/pagerduty/**/*
 terraform:
@@ -58,6 +66,10 @@ bigquery:
   - plugins/destination/bigquery/**/*
 mongodb:
   - plugins/destination/mongodb/**/*
+neo4j:
+  - plugins/destination/neo4j/**/*
+kafka:
+  - plugins/destination/kafka/**/*
 website:
   - website/**/*
 cli:
