@@ -1,6 +1,13 @@
 # Table: azure_subscription_subscriptions
 
+https://learn.microsoft.com/en-us/rest/api/resources/subscriptions/list?tabs=HTTP#subscription
+
 The primary key for this table is **id**.
+
+## Relations
+
+The following tables depend on azure_subscription_subscriptions:
+  - [azure_subscription_subscription_locations](azure_subscription_subscription_locations.md)
 
 ## Columns
 

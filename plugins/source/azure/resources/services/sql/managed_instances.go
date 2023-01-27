@@ -11,10 +11,11 @@ import (
 
 func ManagedInstances() *schema.Table {
 	return &schema.Table{
-		Name:      "azure_sql_managed_instances",
-		Resolver:  fetchManagedInstances,
-		Multiplex: client.SubscriptionMultiplexRegisteredNamespace("azure_sql_managed_instances", client.Namespacemicrosoft_sql),
-		Transform: transformers.TransformWithStruct(&armsql.ManagedInstance{}),
+		Name:        "azure_sql_managed_instances",
+		Resolver:    fetchManagedInstances,
+		Description: "https://learn.microsoft.com/en-us/rest/api/sql/2020-08-01-preview/managed-instances/list?tabs=HTTP#managedinstance",
+		Multiplex:   client.SubscriptionMultiplexRegisteredNamespace("azure_sql_managed_instances", client.Namespacemicrosoft_sql),
+		Transform:   transformers.TransformWithStruct(&armsql.ManagedInstance{}),
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
@@ -30,10 +31,14 @@ func ManagedInstances() *schema.Table {
 				},
 			},
 		},
+		Relations: []*schema.Table{
+			managedInstanceEncryptionProtectors(),
+			managedInstanceVulnerabilityAssessments(),
+		},
 	}
 }
 
-func fetchManagedInstances(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+func fetchManagedInstances(ctx context.Context, meta schema.ClientMeta, _ *schema.Resource, res chan<- any) error {
 	cl := meta.(*client.Client)
 	svc, err := armsql.NewManagedInstancesClient(cl.SubscriptionId, cl.Creds, cl.Options)
 	if err != nil {

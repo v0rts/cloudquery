@@ -1,5 +1,7 @@
 # Table: azure_cosmos_database_accounts
 
+https://learn.microsoft.com/en-us/rest/api/cosmos-db-resource-provider/2022-05-15/database-accounts/list?tabs=HTTP#databaseaccountgetresults
+
 The primary key for this table is **id**.
 
 ## Relations
@@ -16,6 +18,7 @@ The following tables depend on azure_cosmos_database_accounts:
 |_cq_sync_time|Timestamp|
 |_cq_id|UUID|
 |_cq_parent_id|UUID|
+|subscription_id|String|
 |id (PK)|String|
 |identity|JSON|
 |kind|String|

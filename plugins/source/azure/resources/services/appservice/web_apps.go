@@ -3,7 +3,7 @@ package appservice
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/appservice/armappservice"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/appservice/armappservice/v2"
 	"github.com/cloudquery/cloudquery/plugins/source/azure/client"
 	"github.com/cloudquery/plugin-sdk/schema"
 	"github.com/cloudquery/plugin-sdk/transformers"
@@ -11,27 +11,21 @@ import (
 
 func WebApps() *schema.Table {
 	return &schema.Table{
-		Name:      "azure_appservice_web_apps",
-		Resolver:  fetchWebApps,
-		Multiplex: client.SubscriptionMultiplexRegisteredNamespace("azure_appservice_web_apps", client.Namespacemicrosoft_web),
-		Transform: transformers.TransformWithStruct(&armappservice.Site{}),
+		Name:        "azure_appservice_web_apps",
+		Resolver:    fetchWebApps,
+		Description: "https://learn.microsoft.com/en-us/rest/api/appservice/web-apps/list#site",
+		Multiplex:   client.SubscriptionMultiplexRegisteredNamespace("azure_appservice_web_apps", client.Namespacemicrosoft_web),
+		Transform:   transformers.TransformWithStruct(&armappservice.Site{}, transformers.WithPrimaryKeys("ID")),
 		Columns: []schema.Column{
 			{
 				Name:     "subscription_id",
 				Type:     schema.TypeString,
 				Resolver: client.ResolveAzureSubscription,
 			},
-			{
-				Name:     "id",
-				Type:     schema.TypeString,
-				Resolver: schema.PathResolver("ID"),
-				CreationOptions: schema.ColumnCreationOptions{
-					PrimaryKey: true,
-				},
-			},
 		},
 		Relations: []*schema.Table{
 			webAppAuthSettings(),
+			webAppVnetConnections(),
 		},
 	}
 }
