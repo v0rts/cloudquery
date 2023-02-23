@@ -6,11 +6,20 @@
     }
   },
   "github": {
-    "silent": true
+    "silent": true,
+    "enabled": false
   },
   "redirects": [
     {
       "source": "/discord",
+      "destination": "https://discord.gg/QwnWfrcfHg"
+    },
+    {
+      "source": "/discrod",
+      "destination": "https://discord.gg/QwnWfrcfHg"
+    },
+    {
+      "source": "/dicsord",
       "destination": "https://discord.gg/QwnWfrcfHg"
     },
     {
@@ -184,6 +193,10 @@
     {
       "source": "/blog/open-source-cspm",
       "destination": "/how-to-guides/open-source-cspm"
+    },
+    {
+      "source": "/docs/plugins/sources/tailscale/configuration",
+      "destination": "/docs/plugins/sources/tailscale/overview"
     }
   ]
 }

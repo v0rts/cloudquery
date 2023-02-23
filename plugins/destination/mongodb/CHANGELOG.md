@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.1.0](https://github.com/cloudquery/cloudquery/compare/plugins-destination-mongodb-v1.0.11...plugins-destination-mongodb-v1.1.0) (2023-02-21)
+
+
+### Features
+
+* **deps:** Update MongoDB plugin-sdk to v1.38.2 ([#8323](https://github.com/cloudquery/cloudquery/issues/8323)) ([23bb6c3](https://github.com/cloudquery/cloudquery/commit/23bb6c3211d475ba89efe688c0042ddbe0b6eae0))
+
+## [1.0.11](https://github.com/cloudquery/cloudquery/compare/plugins-destination-mongodb-v1.0.10...plugins-destination-mongodb-v1.0.11) (2023-02-21)
+
+
+### Bug Fixes
+
+* **deps:** Update module golang.org/x/net to v0.7.0 [SECURITY] ([#8176](https://github.com/cloudquery/cloudquery/issues/8176)) ([fc4cef8](https://github.com/cloudquery/cloudquery/commit/fc4cef86dce4ca76ca8397e897ab744e48975834))
+
+## [1.0.10](https://github.com/cloudquery/cloudquery/compare/plugins-destination-mongodb-v1.0.9...plugins-destination-mongodb-v1.0.10) (2023-02-14)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.36.0 ([#7809](https://github.com/cloudquery/cloudquery/issues/7809)) ([c85a9cb](https://github.com/cloudquery/cloudquery/commit/c85a9cb697477520e94a1fd260c56b89da62fc87))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.37.0 ([#7933](https://github.com/cloudquery/cloudquery/issues/7933)) ([dc9cffb](https://github.com/cloudquery/cloudquery/commit/dc9cffbf37bbc6fae73a20bf47e6bbf17e74d1f9))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.37.1 ([#8008](https://github.com/cloudquery/cloudquery/issues/8008)) ([c47aac0](https://github.com/cloudquery/cloudquery/commit/c47aac0b5e3190a04299713651b97e360043911f))
+
+## [1.0.9](https://github.com/cloudquery/cloudquery/compare/plugins-destination-mongodb-v1.0.8...plugins-destination-mongodb-v1.0.9) (2023-02-07)
+
+
+### Bug Fixes
+
+* **deps:** Update google.golang.org/genproto digest to 1c01626 ([#7533](https://github.com/cloudquery/cloudquery/issues/7533)) ([c549c27](https://github.com/cloudquery/cloudquery/commit/c549c275077f1cdfb9df0b3f3c129cbf0b150552))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.33.0 ([#7595](https://github.com/cloudquery/cloudquery/issues/7595)) ([c5adc75](https://github.com/cloudquery/cloudquery/commit/c5adc750d4b0242563997c04c582f8da27913095))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.33.1 ([#7614](https://github.com/cloudquery/cloudquery/issues/7614)) ([2fe665c](https://github.com/cloudquery/cloudquery/commit/2fe665cdd80d88c5699bb203bd7accd604dfba99))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.34.0 ([#7719](https://github.com/cloudquery/cloudquery/issues/7719)) ([6a33085](https://github.com/cloudquery/cloudquery/commit/6a33085c75adcf2387f7bbb5aa4f7a84ce7e2957))
+* **deps:** Update module github.com/klauspost/compress to v1.15.15 ([#7575](https://github.com/cloudquery/cloudquery/issues/7575)) ([622be2b](https://github.com/cloudquery/cloudquery/commit/622be2b35de050fc013ae4bde3c3465a644dddd8))
+* **deps:** Update module github.com/xdg-go/scram to v1.1.2 ([#7579](https://github.com/cloudquery/cloudquery/issues/7579)) ([d48b0d7](https://github.com/cloudquery/cloudquery/commit/d48b0d78b003f0370c4533be92c5fa70e383c325))
+
+## [1.0.8](https://github.com/cloudquery/cloudquery/compare/plugins-destination-mongodb-v1.0.7...plugins-destination-mongodb-v1.0.8) (2023-01-31)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.29.0 ([#7121](https://github.com/cloudquery/cloudquery/issues/7121)) ([b7441c9](https://github.com/cloudquery/cloudquery/commit/b7441c93c274ae3a6009474a2b28f44a172dd6dc))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.30.0 ([#7222](https://github.com/cloudquery/cloudquery/issues/7222)) ([73ca21c](https://github.com/cloudquery/cloudquery/commit/73ca21c4259545f7e949c9d780d8184db475d2ac))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.31.0 ([#7228](https://github.com/cloudquery/cloudquery/issues/7228)) ([36e8549](https://github.com/cloudquery/cloudquery/commit/36e8549f722658d909865723630fad1b2821db62))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.32.0 ([#7334](https://github.com/cloudquery/cloudquery/issues/7334)) ([b684122](https://github.com/cloudquery/cloudquery/commit/b68412222219f9ca160c0753290709d52de7fcd6))
+
 ## [1.0.7](https://github.com/cloudquery/cloudquery/compare/plugins-destination-mongodb-v1.0.6...plugins-destination-mongodb-v1.0.7) (2023-01-24)
 
 

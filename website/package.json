@@ -4,9 +4,11 @@
   "private": true,
   "description": "CloudQuery website and docs",
   "scripts": {
+    "predev": "npx tsx ./scripts/prebuild.tsx",
     "dev": "next",
     "start": "next start",
-    "build": "next build",
+    "prebuild": "npx tsx ./scripts/prebuild.tsx",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' next build",
     "postbuild": "next-sitemap",
     "lint": "next lint"
   },
@@ -24,21 +26,22 @@
     "prismjs": "1.29.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-hot-toast": "2.4.0"
+    "react-hot-toast": "2.4.0",
+    "sharp": "^0.31.3"
   },
   "devDependencies": {
-    "@babel/core": "7.20.12",
+    "@babel/core": "7.21.0",
     "@napi-rs/simple-git": "^0.1.8",
     "@types/node": "^18.11.18",
     "@types/react": "^18.0.27",
     "autoprefixer": "10.4.13",
     "csstype": "3.1.1",
-    "eslint": "8.32.0",
+    "eslint": "8.34.0",
     "eslint-config-next": "^13.1.5",
     "eslint-config-prettier": "8.6.0",
     "postcss": "8.4.21",
-    "tailwindcss": "3.2.4",
-    "typescript": "4.9.4"
+    "tailwindcss": "3.2.7",
+    "typescript": "4.9.5"
   },
   "prettier": {
     "embeddedLanguageFormatting": "off",
