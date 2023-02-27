@@ -25,21 +25,20 @@ export default function Integration({
                 <div>
                     <h1 className="max-w-5xl mx-auto nx-text-6xl font-extrabold tracking-tighter leading-[1.1] text-7xl sm:text-7xl lg:nx-text-8xl xl:nx-text-8xl">
                         Export from&nbsp;
-                        <br className="hidden lg:block" />
+                        <span className="hidden lg:block"></span>
                         <span className="pr-1 pb-1 inline-block text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-blue-500 ">
-             {source.name}
-             </span>
+                         {source.name}
+                        </span>
                         &nbsp;to&nbsp;
-                        {destination ?
-                            <span className="pr-1 pb-1 inline-block text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-500 ">
-             {destination.name}
-             </span> : "any destination"}
+                        <span className="pr-1 pb-1 inline-block text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-green-500 ">
+                        {destination.name}
+                        </span>
                     </h1>
                     <p className="max-w-2xl mt-6 nx-text-xl font-medium leading-tight text-gray-400 sm:nx-text-2xl md:nx-text-3xl lg:nx-text-4xl">
                         CloudQuery is an open-source data integration platform that allows you to export data from any source to any destination.
                     </p>
                     <p className="max-w-2xl mt-6 nx-text-xl font-medium leading-tight text-gray-400 sm:nx-text-2xl md:nx-text-3xl lg:nx-text-4xl">
-                        The CloudQuery {source.name} plugin allows you to sync data from {source.name}. It's free, open source, requires no account, and takes only minutes to get started.
+                        The CloudQuery {source.name} plugin allows you to sync data from {source.name} to any destination, including {destination.name}. It's free, open source, requires no account, and takes only minutes to get started.
                     </p>
                     <p className="max-w-2xl mt-6 nx-text-xl font-medium leading-tight text-gray-400 sm:nx-text-2xl md:nx-text-3xl lg:nx-text-4xl">
                     Ready? Let's dive right in!
