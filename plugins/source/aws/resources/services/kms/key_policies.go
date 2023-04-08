@@ -16,13 +16,14 @@ type KeyPolicy struct {
 	Policy *string
 }
 
-func KeyPolicies() *schema.Table {
+func keyPolicies() *schema.Table {
+	tableName := "aws_kms_key_policies"
 	return &schema.Table{
-		Name:        "aws_kms_key_policies",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/kms/latest/APIReference/API_GetKeyPolicy.html`,
 		Resolver:    fetchKeyPolicies,
 		Transform:   transformers.TransformWithStruct(&KeyPolicy{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("kms"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "kms"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
 			client.DefaultRegionColumn(false),

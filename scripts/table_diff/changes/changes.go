@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 var (
@@ -129,14 +131,14 @@ func getColumnChanges(file *gitdiff.File, table string) (changes []change) {
 			if addedColumn.pk() && !deletedColumn.pk() {
 				changes = append(changes, change{
 					Text:     fmt.Sprintf("Table %s: primary key constraint added to column %s", backtickStrings(table, deletedName)...),
-					Breaking: false,
+					Breaking: true,
 				})
 			}
 
 			if !addedColumn.pk() && deletedColumn.pk() {
 				changes = append(changes, change{
 					Text:     fmt.Sprintf("Table %s: primary key constraint removed from column %s", backtickStrings(table, deletedName)...),
-					Breaking: false,
+					Breaking: true,
 				})
 			}
 
@@ -177,8 +179,11 @@ func getColumnChanges(file *gitdiff.File, table string) (changes []change) {
 	}
 
 	// check PK:
-	if len(addedPK) > 0 && len(addedPK) == len(deletedPK) {
-		// if they are unequal the pk added/removed is correct.
+	// Only if all of the Columns are the same before and after the change should
+	// we consider this a "primary key order" change
+	ordering := func(a, b string) bool { return a < b }
+	diff := cmp.Diff(addedPK, deletedPK, cmpopts.SortSlices(ordering))
+	if len(addedPK) > 0 && diff == "" {
 		changes = append(changes, change{
 			Text: fmt.Sprintf("Table %s: primary key order changed from %s to %s",
 				backtickStrings(
@@ -216,7 +221,7 @@ func getFileChanges(file *gitdiff.File) (changes []change, err error) {
 			Text:     fmt.Sprintf("Table %s was removed", backtickStrings(oldTableName)...),
 			Breaking: true,
 		})
-	case file.IsRename:
+	case file.IsRename && oldTableName != newTableName:
 		changes = append(changes, change{
 			Text:     fmt.Sprintf("Table %s was renamed to %s", backtickStrings(oldTableName, newTableName)...),
 			Breaking: true,

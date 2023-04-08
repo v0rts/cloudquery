@@ -1,6 +1,9 @@
 package frauddetector
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/frauddetector"
 	"github.com/aws/aws-sdk-go-v2/service/frauddetector/types"
 
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
@@ -9,11 +12,12 @@ import (
 )
 
 func Labels() *schema.Table {
+	tableName := "aws_frauddetector_labels"
 	return &schema.Table{
-		Name:        "aws_frauddetector_labels",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/frauddetector/latest/api/API_Label.html`,
 		Resolver:    fetchFrauddetectorLabels,
-		Multiplex:   client.ServiceAccountRegionMultiplexer("frauddetector"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "frauddetector"),
 		Transform:   transformers.TransformWithStruct(&types.Label{}),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
@@ -33,4 +37,16 @@ func Labels() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchFrauddetectorLabels(ctx context.Context, meta schema.ClientMeta, _ *schema.Resource, res chan<- any) error {
+	paginator := frauddetector.NewGetLabelsPaginator(meta.(*client.Client).Services().Frauddetector, nil)
+	for paginator.HasMorePages() {
+		output, err := paginator.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+		res <- output.Labels
+	}
+	return nil
 }

@@ -7,12 +7,13 @@ import (
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func GatewayAttachments() *schema.Table {
+func gatewayAttachments() *schema.Table {
+	tableName := "aws_directconnect_gateway_attachments"
 	return &schema.Table{
-		Name:        "aws_directconnect_gateway_attachments",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/directconnect/latest/APIReference/API_DirectConnectGatewayAttachment.html`,
 		Resolver:    fetchDirectconnectGatewayAttachments,
-		Multiplex:   client.ServiceAccountRegionMultiplexer("directconnect"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "directconnect"),
 		Transform:   transformers.TransformWithStruct(&types.DirectConnectGatewayAttachment{}),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),

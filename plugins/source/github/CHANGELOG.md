@@ -1,5 +1,61 @@
 # Changelog
 
+## [5.0.0](https://github.com/cloudquery/cloudquery/compare/plugins-source-github-v4.1.3...plugins-source-github-v5.0.0) (2023-04-04)
+
+
+### This Release has the Following Changes to Tables
+- Table `github_issues`: column added with name `repository_id (PK)` and type `Int` (:warning: breaking)
+
+### ⚠ BREAKING CHANGES
+
+* **github:** Add `repository_id` to `github_issues` primary key ([#9615](https://github.com/cloudquery/cloudquery/issues/9615))
+
+### Bug Fixes
+
+* **deps:** Update golang.org/x/exp digest to 10a5072 ([#9587](https://github.com/cloudquery/cloudquery/issues/9587)) ([31f913f](https://github.com/cloudquery/cloudquery/commit/31f913f8e3538a2ba41b089bb11eae78aaf42ab2))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.1 ([#9520](https://github.com/cloudquery/cloudquery/issues/9520)) ([202c31b](https://github.com/cloudquery/cloudquery/commit/202c31b2788c3df35b5df7d07fdc750f92e7bb23))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.2 ([#9661](https://github.com/cloudquery/cloudquery/issues/9661)) ([a27dc84](https://github.com/cloudquery/cloudquery/commit/a27dc84a9b67b68b5b75b04dd3afe13e2c556082))
+* **deps:** Update module github.com/mattn/go-isatty to v0.0.18 ([#9609](https://github.com/cloudquery/cloudquery/issues/9609)) ([5b2908e](https://github.com/cloudquery/cloudquery/commit/5b2908e8260c6e48f8c5fd6b8bd6c772f0c779d1))
+* **github:** Add `repository_id` to `github_issues` primary key ([#9615](https://github.com/cloudquery/cloudquery/issues/9615)) ([68625cf](https://github.com/cloudquery/cloudquery/commit/68625cf3e26c08f4ede65f696f308b4eee6d6e7d))
+* **github:** Use cursor-based sync for `github_repository_dependabot_alerts` ([#9554](https://github.com/cloudquery/cloudquery/issues/9554)) ([feb4d13](https://github.com/cloudquery/cloudquery/commit/feb4d1318115aa2b31201041ab8f3337c33ece04))
+
+## [4.1.3](https://github.com/cloudquery/cloudquery/compare/plugins-source-github-v4.1.2...plugins-source-github-v4.1.3) (2023-03-28)
+
+
+### Bug Fixes
+
+* **github:** Add pagination for dependabot resources ([#9461](https://github.com/cloudquery/cloudquery/issues/9461)) ([730f448](https://github.com/cloudquery/cloudquery/commit/730f4488da286687d844317509677aa7fb5a4822))
+
+## [4.1.2](https://github.com/cloudquery/cloudquery/compare/plugins-source-github-v4.1.1...plugins-source-github-v4.1.2) (2023-03-21)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.0 ([#9167](https://github.com/cloudquery/cloudquery/issues/9167)) ([49d6477](https://github.com/cloudquery/cloudquery/commit/49d647730a85ea6fae51e97194ba61c0625d1331))
+
+## [4.1.1](https://github.com/cloudquery/cloudquery/compare/plugins-source-github-v4.1.0...plugins-source-github-v4.1.1) (2023-03-15)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.43.0 ([#8949](https://github.com/cloudquery/cloudquery/issues/8949)) ([31dfc63](https://github.com/cloudquery/cloudquery/commit/31dfc634850b699ba7bb7876399270a7367d6c7e))
+
+## [4.1.0](https://github.com/cloudquery/cloudquery/compare/plugins-source-github-v4.0.1...plugins-source-github-v4.1.0) (2023-03-07)
+
+
+### Features
+
+* **docs:** Render tables as a part of the Website and add a [tables search box](https://www.cloudquery.io/tables). The equivalent of the GitHub README.md file is now under each plugin's docs section, for example https://www.cloudquery.io/docs/plugins/sources/aws/tables. The Website HTML page is built from the GitHub markdown file located under each plugin's path in our Website code, for example https://github.com/cloudquery/cloudquery/blob/main/website/pages/docs/plugins/sources/aws/tables.md. For the list of all plugins table files as they are stored on GitHub see https://github.com/cloudquery/cloudquery/tree/main/website/tables ([342b0c5](https://github.com/cloudquery/cloudquery/commit/342b0c569fd28ee26ea3e09ec6d787f85c49f16c))
+* **github:** Add support for app-based authentication and filtering by repository ([#8556](https://github.com/cloudquery/cloudquery/issues/8556)) ([d5d5ddd](https://github.com/cloudquery/cloudquery/commit/d5d5ddd32c5835564c012df5e8856603d5a5cef6))
+
+
+### Bug Fixes
+
+* **deps:** Update golang.org/x/exp digest to c95f2b4 ([#8560](https://github.com/cloudquery/cloudquery/issues/8560)) ([9c3bd5b](https://github.com/cloudquery/cloudquery/commit/9c3bd5b68f9741a360fde6c54bf3f5f3efe06d9e))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.41.0 ([#8682](https://github.com/cloudquery/cloudquery/issues/8682)) ([ea9d065](https://github.com/cloudquery/cloudquery/commit/ea9d065ae9f77c6dd990570974630ae6ac3f153e))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.42.0 ([#8725](https://github.com/cloudquery/cloudquery/issues/8725)) ([b83b277](https://github.com/cloudquery/cloudquery/commit/b83b277a2421d1caf46a26c3229041b27a3da148))
+* **deps:** Update module github.com/stretchr/testify to v1.8.2 ([#8599](https://github.com/cloudquery/cloudquery/issues/8599)) ([2ec8086](https://github.com/cloudquery/cloudquery/commit/2ec808677328410cc96c97a693ef65022d314c32))
+
 ## [4.0.1](https://github.com/cloudquery/cloudquery/compare/plugins-source-github-v4.0.0...plugins-source-github-v4.0.1) (2023-02-28)
 
 

@@ -29,6 +29,8 @@ cloudquery
 CloudQuery
 CMK
 CMKs
+codegen
+Codegen
 compinit
 config
 Config
@@ -54,6 +56,7 @@ discoverability
 Docusaurus
 ELB
 ELBs
+Embeddable
 ENI
 ENIs
 env
@@ -61,6 +64,7 @@ ENV
 exfiltrate
 exploitability
 Exploitability
+extensible
 Extensible
 faceprints
 failover
@@ -106,6 +110,8 @@ licensors
 Lightsail
 Lucene
 Mailchimp
+Meilisearch
+meilisearch
 Metabase
 Metastore
 Mixpanel
@@ -136,11 +142,14 @@ Promtail
 protobuf
 Pulumi
 queryable
+Raasveldt
 ransform
 readme
 README
 recurse
 region_codes
+remediation
+remediations
 RESTful
 runtime
 runtimes
@@ -179,6 +188,7 @@ unencrypted
 unmanaged
 unmarshalling
 upsert
+upserts
 upserted
 uuid
 UUID
@@ -196,3 +206,15 @@ Yandex
 Yevgeny
 zsh
 Zsh
+Reachability
+deregister
+Deregister
+deregistering
+Deregistering
+Macie
+overprivileged
+Overprivileged
+productionize
+cybersecurity
+cyber
+Remediation

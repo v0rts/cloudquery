@@ -1,6 +1,9 @@
 package ssm
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -8,12 +11,13 @@ import (
 )
 
 func PatchBaselines() *schema.Table {
+	tableName := "aws_ssm_patch_baselines"
 	return &schema.Table{
-		Name:        "aws_ssm_patch_baselines",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PatchBaselineIdentity.html`,
 		Resolver:    fetchSsmPatchBaselines,
 		Transform:   transformers.TransformWithStruct(&types.PatchBaselineIdentity{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("ssm"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "ssm"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(true),
 			client.DefaultRegionColumn(true),
@@ -27,4 +31,19 @@ func PatchBaselines() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchSsmPatchBaselines(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Ssm
+
+	paginator := ssm.NewDescribePatchBaselinesPaginator(svc, nil)
+	for paginator.HasMorePages() {
+		v, err := paginator.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+		res <- v.BaselineIdentities
+	}
+	return nil
 }

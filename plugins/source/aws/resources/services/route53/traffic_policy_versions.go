@@ -7,13 +7,14 @@ import (
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func TrafficPolicyVersions() *schema.Table {
+func trafficPolicyVersions() *schema.Table {
+	tableName := "aws_route53_traffic_policy_versions"
 	return &schema.Table{
-		Name:        "aws_route53_traffic_policy_versions",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/Route53/latest/APIReference/API_TrafficPolicy.html`,
 		Resolver:    fetchRoute53TrafficPolicyVersions,
 		Transform:   transformers.TransformWithStruct(&types.TrafficPolicy{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("route53"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "route53"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
 			{

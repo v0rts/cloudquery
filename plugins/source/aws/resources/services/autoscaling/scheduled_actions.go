@@ -1,6 +1,10 @@
 package autoscaling
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -8,11 +12,12 @@ import (
 )
 
 func ScheduledActions() *schema.Table {
+	tableName := "aws_autoscaling_scheduled_actions"
 	return &schema.Table{
-		Name:        "aws_autoscaling_scheduled_actions",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_ScheduledUpdateGroupAction.html`,
 		Resolver:    fetchAutoscalingScheduledActions,
-		Multiplex:   client.ServiceAccountRegionMultiplexer("autoscaling"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "autoscaling"),
 		Transform:   transformers.TransformWithStruct(&types.ScheduledUpdateGroupAction{}),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
@@ -27,4 +32,26 @@ func ScheduledActions() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchAutoscalingScheduledActions(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+	c := meta.(*client.Client)
+	svc := c.Services().Autoscaling
+	params := &autoscaling.DescribeScheduledActionsInput{
+		MaxRecords: aws.Int32(100),
+	}
+	for {
+		output, err := svc.DescribeScheduledActions(ctx, params)
+		if err != nil {
+			return err
+		}
+		for _, scheduledUpdateGroupAction := range output.ScheduledUpdateGroupActions {
+			res <- scheduledUpdateGroupAction
+		}
+		if aws.ToString(output.NextToken) == "" {
+			break
+		}
+		params.NextToken = output.NextToken
+	}
+	return nil
 }

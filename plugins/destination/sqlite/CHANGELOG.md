@@ -1,5 +1,47 @@
 # Changelog
 
+## [1.3.6](https://github.com/cloudquery/cloudquery/compare/plugins-destination-sqlite-v1.3.5...plugins-destination-sqlite-v1.3.6) (2023-04-04)
+
+
+### Bug Fixes
+
+* **deps:** Update ghcr.io/gythialy/golang-cross Docker tag to v1.20.2 ([#9599](https://github.com/cloudquery/cloudquery/issues/9599)) ([46ce2dc](https://github.com/cloudquery/cloudquery/commit/46ce2dc3165e87f4017608c883c7e4ede3d8b19d))
+* **deps:** Update golang.org/x/exp digest to 10a5072 ([#9587](https://github.com/cloudquery/cloudquery/issues/9587)) ([31f913f](https://github.com/cloudquery/cloudquery/commit/31f913f8e3538a2ba41b089bb11eae78aaf42ab2))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.1 ([#9520](https://github.com/cloudquery/cloudquery/issues/9520)) ([202c31b](https://github.com/cloudquery/cloudquery/commit/202c31b2788c3df35b5df7d07fdc750f92e7bb23))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.2 ([#9661](https://github.com/cloudquery/cloudquery/issues/9661)) ([a27dc84](https://github.com/cloudquery/cloudquery/commit/a27dc84a9b67b68b5b75b04dd3afe13e2c556082))
+* **deps:** Update module github.com/mattn/go-isatty to v0.0.18 ([#9609](https://github.com/cloudquery/cloudquery/issues/9609)) ([5b2908e](https://github.com/cloudquery/cloudquery/commit/5b2908e8260c6e48f8c5fd6b8bd6c772f0c779d1))
+
+## [1.3.5](https://github.com/cloudquery/cloudquery/compare/plugins-destination-sqlite-v1.3.4...plugins-destination-sqlite-v1.3.5) (2023-03-21)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.0 ([#9167](https://github.com/cloudquery/cloudquery/issues/9167)) ([49d6477](https://github.com/cloudquery/cloudquery/commit/49d647730a85ea6fae51e97194ba61c0625d1331))
+
+## [1.3.4](https://github.com/cloudquery/cloudquery/compare/plugins-destination-sqlite-v1.3.3...plugins-destination-sqlite-v1.3.4) (2023-03-14)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.43.0 ([#8949](https://github.com/cloudquery/cloudquery/issues/8949)) ([31dfc63](https://github.com/cloudquery/cloudquery/commit/31dfc634850b699ba7bb7876399270a7367d6c7e))
+
+## [1.3.3](https://github.com/cloudquery/cloudquery/compare/plugins-destination-sqlite-v1.3.2...plugins-destination-sqlite-v1.3.3) (2023-03-08)
+
+
+### Bug Fixes
+
+* Add Sentry logging for SQLite plugin ([#8769](https://github.com/cloudquery/cloudquery/issues/8769)) ([f075067](https://github.com/cloudquery/cloudquery/commit/f075067edb60329639fe25e1fb38e932d8fb520a))
+
+## [1.3.2](https://github.com/cloudquery/cloudquery/compare/plugins-destination-sqlite-v1.3.1...plugins-destination-sqlite-v1.3.2) (2023-03-07)
+
+
+### Bug Fixes
+
+* **deps:** Update ghcr.io/gythialy/golang-cross Docker tag to v1.20.1 ([#8627](https://github.com/cloudquery/cloudquery/issues/8627)) ([7a5e52e](https://github.com/cloudquery/cloudquery/commit/7a5e52e19941b2c541fcf64ca28c9037a16610a6))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.41.0 ([#8682](https://github.com/cloudquery/cloudquery/issues/8682)) ([ea9d065](https://github.com/cloudquery/cloudquery/commit/ea9d065ae9f77c6dd990570974630ae6ac3f153e))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.42.0 ([#8725](https://github.com/cloudquery/cloudquery/issues/8725)) ([b83b277](https://github.com/cloudquery/cloudquery/commit/b83b277a2421d1caf46a26c3229041b27a3da148))
+* **deps:** Update module github.com/stretchr/testify to v1.8.2 ([#8599](https://github.com/cloudquery/cloudquery/issues/8599)) ([2ec8086](https://github.com/cloudquery/cloudquery/commit/2ec808677328410cc96c97a693ef65022d314c32))
+
 ## [1.3.1](https://github.com/cloudquery/cloudquery/compare/plugins-destination-sqlite-v1.3.0...plugins-destination-sqlite-v1.3.1) (2023-02-28)
 
 

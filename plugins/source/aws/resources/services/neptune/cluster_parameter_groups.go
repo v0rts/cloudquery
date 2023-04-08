@@ -1,6 +1,10 @@
 package neptune
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/neptune"
 	"github.com/aws/aws-sdk-go-v2/service/neptune/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -8,12 +12,13 @@ import (
 )
 
 func ClusterParameterGroups() *schema.Table {
+	tableName := "aws_neptune_cluster_parameter_groups"
 	return &schema.Table{
-		Name:        "aws_neptune_cluster_parameter_groups",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/neptune/latest/userguide/api-parameters.html#DescribeDBParameters`,
 		Resolver:    fetchNeptuneClusterParameterGroups,
 		Transform:   transformers.TransformWithStruct(&types.DBClusterParameterGroup{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("neptune"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "neptune"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
 			client.DefaultRegionColumn(false),
@@ -33,7 +38,28 @@ func ClusterParameterGroups() *schema.Table {
 		},
 
 		Relations: []*schema.Table{
-			ClusterParameterGroupParameters(),
+			clusterParameterGroupParameters(),
 		},
 	}
+}
+
+func fetchNeptuneClusterParameterGroups(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+	cl := meta.(*client.Client)
+	svc := cl.Services().Neptune
+	input := neptune.DescribeDBClusterParameterGroupsInput{
+		Filters: []types.Filter{{Name: aws.String("engine"), Values: []string{"neptune"}}},
+	}
+
+	for {
+		output, err := svc.DescribeDBClusterParameterGroups(ctx, &input)
+		if err != nil {
+			return err
+		}
+		res <- output.DBClusterParameterGroups
+		if aws.ToString(output.Marker) == "" {
+			break
+		}
+		input.Marker = output.Marker
+	}
+	return nil
 }

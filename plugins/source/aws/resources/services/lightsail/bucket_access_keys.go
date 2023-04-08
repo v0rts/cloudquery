@@ -1,19 +1,23 @@
 package lightsail
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/lightsail"
 	"github.com/aws/aws-sdk-go-v2/service/lightsail/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func BucketAccessKeys() *schema.Table {
+func bucketAccessKeys() *schema.Table {
+	tableName := "aws_lightsail_bucket_access_keys"
 	return &schema.Table{
-		Name:        "aws_lightsail_bucket_access_keys",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/lightsail/2016-11-28/api-reference/API_AccessKey.html`,
 		Resolver:    fetchLightsailBucketAccessKeys,
 		Transform:   transformers.TransformWithStruct(&types.AccessKey{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("lightsail"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "lightsail"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
 			client.DefaultRegionColumn(false),
@@ -24,4 +28,19 @@ func BucketAccessKeys() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchLightsailBucketAccessKeys(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+	r := parent.Item.(types.Bucket)
+	cl := meta.(*client.Client)
+	svc := cl.Services().Lightsail
+	input := lightsail.GetBucketAccessKeysInput{
+		BucketName: r.Name,
+	}
+	response, err := svc.GetBucketAccessKeys(ctx, &input)
+	if err != nil {
+		return err
+	}
+	res <- response.AccessKeys
+	return nil
 }

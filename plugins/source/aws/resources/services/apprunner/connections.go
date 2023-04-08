@@ -1,6 +1,9 @@
 package apprunner
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/apprunner"
 	"github.com/aws/aws-sdk-go-v2/service/apprunner/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -8,11 +11,12 @@ import (
 )
 
 func Connections() *schema.Table {
+	tableName := "aws_apprunner_connections"
 	return &schema.Table{
-		Name:        "aws_apprunner_connections",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/apprunner/latest/api/API_Connection.html`,
 		Resolver:    fetchApprunnerConnections,
-		Multiplex:   client.ServiceAccountRegionMultiplexer("apprunner"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "apprunner"),
 		Transform:   transformers.TransformWithStruct(&types.ConnectionSummary{}),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
@@ -32,4 +36,18 @@ func Connections() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchApprunnerConnections(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+	var config apprunner.ListConnectionsInput
+	svc := meta.(*client.Client).Services().Apprunner
+	paginator := apprunner.NewListConnectionsPaginator(svc, &config)
+	for paginator.HasMorePages() {
+		output, err := paginator.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+		res <- output.ConnectionSummaryList
+	}
+	return nil
 }

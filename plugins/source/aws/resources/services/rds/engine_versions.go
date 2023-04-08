@@ -1,6 +1,9 @@
 package rds
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/aws/aws-sdk-go-v2/service/rds/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -8,12 +11,13 @@ import (
 )
 
 func EngineVersions() *schema.Table {
+	tableName := "aws_rds_engine_versions"
 	return &schema.Table{
-		Name:        "aws_rds_engine_versions",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/documentdb/latest/developerguide/API_DBEngineVersion.html`,
 		Resolver:    fetchRdsEngineVersions,
 		Transform:   transformers.TransformWithStruct(&types.DBEngineVersion{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("rds"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "rds"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(true),
 			client.DefaultRegionColumn(true),
@@ -33,7 +37,21 @@ func EngineVersions() *schema.Table {
 		},
 
 		Relations: []*schema.Table{
-			ClusterParameters(),
+			clusterParameters(),
 		},
 	}
+}
+
+func fetchRdsEngineVersions(ctx context.Context, meta schema.ClientMeta, _ *schema.Resource, res chan<- any) error {
+	svc := meta.(*client.Client).Services().Rds
+	input := &rds.DescribeDBEngineVersionsInput{}
+	p := rds.NewDescribeDBEngineVersionsPaginator(svc, input)
+	for p.HasMorePages() {
+		response, err := p.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+		res <- response.DBEngineVersions
+	}
+	return nil
 }

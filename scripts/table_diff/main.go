@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	sourcePluginDocsRegex = regexp.MustCompile(`^plugins/source/.*?/docs/tables/.*\.md$`)
+	sourcePluginDocsRegex = regexp.MustCompile(`^website/tables/.*?/.*\.md$`)
 )
 
 func isPluginTableDocFile(file *gitdiff.File) bool {
@@ -64,5 +64,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	os.WriteFile(outFile, out, 0644)
+	err = os.WriteFile(outFile, out, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

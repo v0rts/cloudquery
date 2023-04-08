@@ -1,5 +1,56 @@
 # Changelog
 
+## [2.0.10](https://github.com/cloudquery/cloudquery/compare/plugins-destination-kafka-v2.0.9...plugins-destination-kafka-v2.0.10) (2023-04-05)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/filetypes to v1.6.2 ([#9738](https://github.com/cloudquery/cloudquery/issues/9738)) ([3144bc4](https://github.com/cloudquery/cloudquery/commit/3144bc431eaeb346682dc1db3277e1379ece9a24))
+
+## [2.0.9](https://github.com/cloudquery/cloudquery/compare/plugins-destination-kafka-v2.0.8...plugins-destination-kafka-v2.0.9) (2023-04-04)
+
+
+### Bug Fixes
+
+* **deps:** Update github.com/apache/arrow/go/v12 digest to 7e19111 ([#9561](https://github.com/cloudquery/cloudquery/issues/9561)) ([dab17b9](https://github.com/cloudquery/cloudquery/commit/dab17b9c73e93aeafa06a4643db5b932a5a463c9))
+* **deps:** Update github.com/xitongsys/parquet-go-source digest to fbbcdea ([#9566](https://github.com/cloudquery/cloudquery/issues/9566)) ([4256350](https://github.com/cloudquery/cloudquery/commit/4256350bd8a727963fc244dccc5f13cd97b0e5cd))
+* **deps:** Update golang.org/x/exp digest to 10a5072 ([#9587](https://github.com/cloudquery/cloudquery/issues/9587)) ([31f913f](https://github.com/cloudquery/cloudquery/commit/31f913f8e3538a2ba41b089bb11eae78aaf42ab2))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.1 ([#9520](https://github.com/cloudquery/cloudquery/issues/9520)) ([202c31b](https://github.com/cloudquery/cloudquery/commit/202c31b2788c3df35b5df7d07fdc750f92e7bb23))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.2 ([#9661](https://github.com/cloudquery/cloudquery/issues/9661)) ([a27dc84](https://github.com/cloudquery/cloudquery/commit/a27dc84a9b67b68b5b75b04dd3afe13e2c556082))
+* **deps:** Update module github.com/mattn/go-isatty to v0.0.18 ([#9609](https://github.com/cloudquery/cloudquery/issues/9609)) ([5b2908e](https://github.com/cloudquery/cloudquery/commit/5b2908e8260c6e48f8c5fd6b8bd6c772f0c779d1))
+
+## [2.0.8](https://github.com/cloudquery/cloudquery/compare/plugins-destination-kafka-v2.0.7...plugins-destination-kafka-v2.0.8) (2023-03-21)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.44.0 ([#9167](https://github.com/cloudquery/cloudquery/issues/9167)) ([49d6477](https://github.com/cloudquery/cloudquery/commit/49d647730a85ea6fae51e97194ba61c0625d1331))
+
+## [2.0.7](https://github.com/cloudquery/cloudquery/compare/plugins-destination-kafka-v2.0.6...plugins-destination-kafka-v2.0.7) (2023-03-14)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/filetypes to v1.5.1 ([#8951](https://github.com/cloudquery/cloudquery/issues/8951)) ([197559e](https://github.com/cloudquery/cloudquery/commit/197559e71e5d01b5a7fa194008ffc6e3cd22705f))
+
+## [2.0.6](https://github.com/cloudquery/cloudquery/compare/plugins-destination-kafka-v2.0.5...plugins-destination-kafka-v2.0.6) (2023-03-08)
+
+
+### Bug Fixes
+
+* **deps:** Update module github.com/cloudquery/filetypes to v1.5.0 ([#8832](https://github.com/cloudquery/cloudquery/issues/8832)) ([4d6a0ef](https://github.com/cloudquery/cloudquery/commit/4d6a0ef294f97135c13cae729ea93288365f8a07))
+
+## [2.0.5](https://github.com/cloudquery/cloudquery/compare/plugins-destination-kafka-v2.0.4...plugins-destination-kafka-v2.0.5) (2023-03-07)
+
+
+### Bug Fixes
+
+* **deps:** Update golang.org/x/xerrors digest to 04be3eb ([#8561](https://github.com/cloudquery/cloudquery/issues/8561)) ([39ccfcd](https://github.com/cloudquery/cloudquery/commit/39ccfcd9a293509e67c31a668c843f2f799a5a38))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.41.0 ([#8682](https://github.com/cloudquery/cloudquery/issues/8682)) ([ea9d065](https://github.com/cloudquery/cloudquery/commit/ea9d065ae9f77c6dd990570974630ae6ac3f153e))
+* **deps:** Update module github.com/cloudquery/plugin-sdk to v1.42.0 ([#8725](https://github.com/cloudquery/cloudquery/issues/8725)) ([b83b277](https://github.com/cloudquery/cloudquery/commit/b83b277a2421d1caf46a26c3229041b27a3da148))
+* **deps:** Update module github.com/jcmturner/gokrb5/v8 to v8.4.4 ([#8573](https://github.com/cloudquery/cloudquery/issues/8573)) ([91ec200](https://github.com/cloudquery/cloudquery/commit/91ec200703923b7a0ca28c1a59bc723e6f709522))
+* **deps:** Update module github.com/stretchr/testify to v1.8.2 ([#8599](https://github.com/cloudquery/cloudquery/issues/8599)) ([2ec8086](https://github.com/cloudquery/cloudquery/commit/2ec808677328410cc96c97a693ef65022d314c32))
+
 ## [2.0.4](https://github.com/cloudquery/cloudquery/compare/plugins-destination-kafka-v2.0.3...plugins-destination-kafka-v2.0.4) (2023-02-28)
 
 

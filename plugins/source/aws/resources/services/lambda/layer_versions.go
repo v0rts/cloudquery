@@ -7,13 +7,14 @@ import (
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func LayerVersions() *schema.Table {
+func layerVersions() *schema.Table {
+	tableName := "aws_lambda_layer_versions"
 	return &schema.Table{
-		Name:        "aws_lambda_layer_versions",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/lambda/latest/dg/API_LayerVersionsListItem.html`,
 		Resolver:    fetchLambdaLayerVersions,
 		Transform:   transformers.TransformWithStruct(&types.LayerVersionsListItem{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("lambda"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "lambda"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
 			client.DefaultRegionColumn(false),
@@ -33,7 +34,7 @@ func LayerVersions() *schema.Table {
 		},
 
 		Relations: []*schema.Table{
-			LayerVersionPolicies(),
+			layerVersionPolicies(),
 		},
 	}
 }

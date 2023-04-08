@@ -7,12 +7,13 @@ import (
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func UsagePlanKeys() *schema.Table {
+func usagePlanKeys() *schema.Table {
+	tableName := "aws_apigateway_usage_plan_keys"
 	return &schema.Table{
-		Name:        "aws_apigateway_usage_plan_keys",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/apigateway/latest/api/API_UsagePlanKey.html`,
 		Resolver:    fetchApigatewayUsagePlanKeys,
-		Multiplex:   client.ServiceAccountRegionMultiplexer("apigateway"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "apigateway"),
 		Transform:   transformers.TransformWithStruct(&types.UsagePlanKey{}),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(true),

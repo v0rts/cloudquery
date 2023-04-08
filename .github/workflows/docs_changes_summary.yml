@@ -55,7 +55,7 @@ jobs:
             }).join('\n')
             return changesList
       - name: Find Comment
-        uses: peter-evans/find-comment@034abe94d3191f9c89d870519735beae326f2bdb
+        uses: peter-evans/find-comment@ebedc736bfc43efd7c55ac003e2f7c66dab94fe2
         if: steps.get-changes.outputs.result != ''
         id: find-comment
         with:
@@ -63,7 +63,7 @@ jobs:
           comment-author: 'github-actions[bot]'
           body-includes: '### This PR has the following changes to source plugin(s) tables:'
       - name: Create or update comment
-        uses: peter-evans/create-or-update-comment@c5a7a9808bb4d6de79278436482399ce9a4de9d5
+        uses: peter-evans/create-or-update-comment@5f728c3dae25f329afbe34ee4d08eef25569d79f
         if: steps.get-changes.outputs.result != ''
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}

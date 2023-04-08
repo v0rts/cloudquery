@@ -1,18 +1,25 @@
 package apigatewayv2
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func ApiAuthorizers() *schema.Table {
+func apiAuthorizers() *schema.Table {
+	tableName := "aws_apigatewayv2_api_authorizers"
 	return &schema.Table{
-		Name:        "aws_apigatewayv2_api_authorizers",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/apigateway/latest/api/API_Authorizer.html`,
 		Resolver:    fetchApigatewayv2ApiAuthorizers,
-		Multiplex:   client.ServiceAccountRegionMultiplexer("apigateway"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "apigateway"),
 		Transform:   transformers.TransformWithStruct(&types.Authorizer{}),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(true),
@@ -37,4 +44,39 @@ func ApiAuthorizers() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchApigatewayv2ApiAuthorizers(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+	r := parent.Item.(types.Api)
+	config := apigatewayv2.GetAuthorizersInput{
+		ApiId: r.ApiId,
+	}
+	c := meta.(*client.Client)
+	svc := c.Services().Apigatewayv2
+	for {
+		response, err := svc.GetAuthorizers(ctx, &config)
+
+		if err != nil {
+			return err
+		}
+		res <- response.Items
+		if aws.ToString(response.NextToken) == "" {
+			break
+		}
+		config.NextToken = response.NextToken
+	}
+	return nil
+}
+
+func resolveApiAuthorizerArn(ctx context.Context, meta schema.ClientMeta, resource *schema.Resource, c schema.Column) error {
+	cl := meta.(*client.Client)
+	r := resource.Item.(types.Authorizer)
+	p := resource.Parent.Item.(types.Api)
+	return resource.Set(c.Name, arn.ARN{
+		Partition: cl.Partition,
+		Service:   string(client.ApigatewayService),
+		Region:    cl.Region,
+		AccountID: "",
+		Resource:  fmt.Sprintf("/apis/%s/authorizers/%s", aws.ToString(p.ApiId), aws.ToString(r.AuthorizerId)),
+	}.String())
 }

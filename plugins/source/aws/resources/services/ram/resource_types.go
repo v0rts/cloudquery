@@ -1,6 +1,10 @@
 package ram
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ram"
 	"github.com/aws/aws-sdk-go-v2/service/ram/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -8,13 +12,14 @@ import (
 )
 
 func ResourceTypes() *schema.Table {
+	tableName := "aws_ram_resource_types"
 	return &schema.Table{
-		Name:        "aws_ram_resource_types",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/ram/latest/APIReference/API_ServiceNameAndResourceType.html`,
 		Resolver:    fetchRamResourceTypes,
 		Transform: transformers.TransformWithStruct(&types.ServiceNameAndResourceType{},
 			transformers.WithPrimaryKeys("ResourceType", "ServiceName")),
-		Multiplex: client.ServiceAccountRegionMultiplexer("ram"),
+		Multiplex: client.ServiceAccountRegionMultiplexer(tableName, "ram"),
 		Columns: []schema.Column{
 			{
 				Name:            "account_id",
@@ -30,4 +35,17 @@ func ResourceTypes() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchRamResourceTypes(ctx context.Context, meta schema.ClientMeta, _ *schema.Resource, res chan<- any) error {
+	input := &ram.ListResourceTypesInput{MaxResults: aws.Int32(500)}
+	paginator := ram.NewListResourceTypesPaginator(meta.(*client.Client).Services().Ram, input)
+	for paginator.HasMorePages() {
+		response, err := paginator.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+		res <- response.ResourceTypes
+	}
+	return nil
 }

@@ -7,13 +7,14 @@ import (
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func DatabaseTableIndexes() *schema.Table {
+func databaseTableIndexes() *schema.Table {
+	tableName := "aws_glue_database_table_indexes"
 	return &schema.Table{
-		Name:        "aws_glue_database_table_indexes",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/glue/latest/webapi/API_PartitionIndexDescriptor.html`,
 		Resolver:    fetchGlueDatabaseTableIndexes,
 		Transform:   transformers.TransformWithStruct(&types.PartitionIndexDescriptor{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("glue"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "glue"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),
 			client.DefaultRegionColumn(false),

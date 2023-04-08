@@ -7,12 +7,13 @@ import (
 	"github.com/cloudquery/plugin-sdk/transformers"
 )
 
-func GatewayAssociations() *schema.Table {
+func gatewayAssociations() *schema.Table {
+	tableName := "aws_directconnect_gateway_associations"
 	return &schema.Table{
-		Name:        "aws_directconnect_gateway_associations",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/directconnect/latest/APIReference/API_DirectConnectGatewayAssociation.html`,
 		Resolver:    fetchDirectconnectGatewayAssociations,
-		Multiplex:   client.ServiceAccountRegionMultiplexer("directconnect"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "directconnect"),
 		Transform:   transformers.TransformWithStruct(&types.DirectConnectGatewayAssociation{}),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(false),

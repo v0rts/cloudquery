@@ -1,6 +1,9 @@
 package xray
 
 import (
+	"context"
+
+	"github.com/aws/aws-sdk-go-v2/service/xray"
 	"github.com/aws/aws-sdk-go-v2/service/xray/types"
 	"github.com/cloudquery/cloudquery/plugins/source/aws/client"
 	"github.com/cloudquery/plugin-sdk/schema"
@@ -8,12 +11,13 @@ import (
 )
 
 func ResourcePolicies() *schema.Table {
+	tableName := "aws_xray_resource_policies"
 	return &schema.Table{
-		Name:        "aws_xray_resource_policies",
+		Name:        tableName,
 		Description: `https://docs.aws.amazon.com/xray/latest/api/API_ResourcePolicy.html`,
 		Resolver:    fetchXrayResourcePolicies,
 		Transform:   transformers.TransformWithStruct(&types.ResourcePolicy{}),
-		Multiplex:   client.ServiceAccountRegionMultiplexer("xray"),
+		Multiplex:   client.ServiceAccountRegionMultiplexer(tableName, "xray"),
 		Columns: []schema.Column{
 			client.DefaultAccountIDColumn(true),
 			client.DefaultRegionColumn(true),
@@ -35,4 +39,16 @@ func ResourcePolicies() *schema.Table {
 			},
 		},
 	}
+}
+
+func fetchXrayResourcePolicies(ctx context.Context, meta schema.ClientMeta, parent *schema.Resource, res chan<- any) error {
+	paginator := xray.NewListResourcePoliciesPaginator(meta.(*client.Client).Services().Xray, nil)
+	for paginator.HasMorePages() {
+		v, err := paginator.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+		res <- v.ResourcePolicies
+	}
+	return nil
 }
